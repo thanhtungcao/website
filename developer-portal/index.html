@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cổng Nhà Phát Triển</title>
+<meta name="description" content="Cổng thông tin dành cho nhà phát triển: tài liệu API, môi trường sandbox và hướng dẫn tích hợp dịch vụ thanh toán.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #0b4ea2;
+    --primary-dark: #083a7a;
+    --accent: #e4002b;
+    --bg: #ffffff;
+    --bg-soft: #f3f6fb;
+    --text: #1c2433;
+    --muted: #5b6577;
+    --border: #e1e6ef;
+    --card: #ffffff;
+    --radius: 12px;
+    --shadow: 0 6px 24px rgba(11, 78, 162, .08);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; }
+  .container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---------- Header ---------- */
+  .topbar { background: var(--primary-dark); color: #cfdcf2; font-size: 13px; }
+  .topbar .container { display: flex; justify-content: flex-end; gap: 20px; padding-top: 6px; padding-bottom: 6px; }
+  .topbar a:hover { color: #fff; }
+  .lang { display: flex; gap: 8px; }
+  .lang a.active { color: #fff; font-weight: 600; }
+
+  header.site {
+    position: sticky; top: 0; z-index: 50;
+    background: #fff; border-bottom: 1px solid var(--border);
+  }
+  header.site .container { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; color: var(--primary); }
+  .logo-mark {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: grid; place-items: center; color: #fff; font-size: 18px;
+  }
+  .logo small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+  nav.main ul { list-style: none; display: flex; gap: 28px; margin: 0; padding: 0; }
+  nav.main a { font-weight: 500; color: var(--text); padding: 24px 0; border-bottom: 2px solid transparent; }
+  nav.main a:hover, nav.main a.active { color: var(--primary); border-color: var(--primary); }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 15px;
+    border: 1px solid transparent; cursor: pointer; transition: .2s; font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-outline { border-color: var(--primary); color: var(--primary); background: #fff; }
+  .btn-outline:hover { background: var(--bg-soft); }
+  .btn-light { background: #fff; color: var(--primary); }
+  .btn-light:hover { background: #e8eefa; }
+  .btn-ghost { border-color: rgba(255,255,255,.6); color: #fff; }
+  .btn-ghost:hover { background: rgba(255,255,255,.12); }
+  .menu-toggle { display: none; background: none; border: 0; font-size: 26px; color: var(--primary); cursor: pointer; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    background: radial-gradient(circle at 85% 20%, rgba(228,0,43,.25), transparent 40%),
+                linear-gradient(120deg, var(--primary-dark), var(--primary) 60%, #1a6fd6);
+    color: #fff; padding: 88px 0 96px; overflow: hidden;
+  }
+  .hero .container { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+  .hero .eyebrow { display: inline-block; background: rgba(255,255,255,.15); padding: 6px 14px; border-radius: 999px; font-size: 13px; margin-bottom: 18px; }
+  .hero h1 { font-size: 44px; line-height: 1.2; margin: 0 0 18px; }
+  .hero p { font-size: 18px; color: #dbe6f7; margin: 0 0 32px; max-width: 560px; }
+  .hero .actions { display: flex; gap: 14px; flex-wrap: wrap; }
+  .code-card {
+    background: #0d1b33; border-radius: var(--radius); box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13.5px; overflow: hidden;
+  }
+  .code-card .bar { display: flex; gap: 6px; padding: 12px 14px; background: #13264a; }
+  .code-card .bar span { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; }
+  .code-card .bar span:nth-child(2) { background: #febc2e; }
+  .code-card .bar span:nth-child(3) { background: #28c840; }
+  .code-card pre { margin: 0; padding: 20px; color: #cfe0ff; overflow-x: auto; }
+  .k { color: #ff8fa3; } .s { color: #9be29b; } .c { color: #6c84b0; } .n { color: #ffd479; }
+
+  /* ---------- Stats ---------- */
+  .stats { margin-top: -44px; position: relative; z-index: 2; }
+  .stats .grid { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); display: grid; grid-template-columns: repeat(4, 1fr); }
+  .stat { padding: 26px 20px; text-align: center; border-right: 1px solid var(--border); }
+  .stat:last-child { border-right: 0; }
+  .stat b { display: block; font-size: 30px; color: var(--primary); }
+  .stat span { color: var(--muted); font-size: 14px; }
+
+  /* ---------- Sections ---------- */
+  section { padding: 84px 0; }
+  .section-soft { background: var(--bg-soft); }
+  .section-head { text-align: center; max-width: 720px; margin: 0 auto 48px; }
+  .section-head .tag { color: var(--accent); font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .1em; }
+  .section-head h2 { font-size: 34px; margin: 8px 0 12px; }
+  .section-head p { color: var(--muted); margin: 0; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 28px; transition: .25s; display: flex; flex-direction: column;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: transparent; }
+  .icon {
+    width: 52px; height: 52px; border-radius: 12px; background: #e8f0fc; color: var(--primary);
+    display: grid; place-items: center; margin-bottom: 18px;
+  }
+  .icon svg { width: 26px; height: 26px; }
+  .card h3 { margin: 0 0 10px; font-size: 19px; }
+  .card p { margin: 0 0 18px; color: var(--muted); font-size: 15px; flex: 1; }
+  .card .more { color: var(--primary); font-weight: 600; font-size: 14px; }
+  .card .more:hover { text-decoration: underline; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; background: #fde8ec; color: var(--accent); margin-left: 6px; vertical-align: middle; }
+
+  /* Steps */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; counter-reset: step; }
+  .step { position: relative; text-align: center; padding: 0 8px; }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    width: 56px; height: 56px; margin: 0 auto 18px; border-radius: 50%;
+    background: var(--primary); color: #fff; font-weight: 700; font-size: 22px;
+    display: grid; place-items: center; box-shadow: 0 0 0 8px #dbe6f7;
+  }
+  .step:not(:last-child)::after {
+    content: ""; position: absolute; top: 28px; left: calc(50% + 44px); right: calc(-50% + 44px);
+    border-top: 2px dashed #b7c8e6;
+  }
+  .step h4 { margin: 0 0 8px; font-size: 17px; }
+  .step p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  /* Docs split */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+  .split h2 { font-size: 32px; margin: 0 0 14px; }
+  .split p { color: var(--muted); }
+  .check { list-style: none; padding: 0; margin: 20px 0 28px; }
+  .check li { padding-left: 30px; position: relative; margin-bottom: 12px; }
+  .check li::before {
+    content: "✓"; position: absolute; left: 0; top: 1px; width: 20px; height: 20px; border-radius: 50%;
+    background: #e3f5e9; color: #1a9a4b; font-size: 12px; font-weight: 700; display: grid; place-items: center;
+  }
+  .doc-list { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .doc-list a { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid var(--border); }
+  .doc-list a:last-child { border-bottom: 0; }
+  .doc-list a:hover { background: var(--bg-soft); color: var(--primary); }
+  .method { font-family: ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 6px; margin-right: 12px; }
+  .get { background: #e3f5e9; color: #1a9a4b; } .post { background: #e8f0fc; color: var(--primary); }
+  .doc-list .path { font-family: ui-monospace, Menlo, monospace; font-size: 14px; }
+
+  /* News */
+  .news { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .news article { background: #fff; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+  .news .thumb { height: 160px; background: linear-gradient(135deg, #dbe6f7, #f6dce2); display: grid; place-items: center; color: var(--primary); font-weight: 700; }
+  .news .body { padding: 20px; }
+  .news time { font-size: 13px; color: var(--muted); }
+  .news h3 { font-size: 17px; margin: 6px 0 0; }
+
+  /* FAQ */
+  .faq { max-width: 820px; margin: 0 auto; }
+  details { background: #fff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; padding: 0 22px; }
+  summary { cursor: pointer; padding: 18px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; }
+  summary::after { content: "+"; font-size: 22px; color: var(--primary); line-height: 1; }
+  details[open] summary::after { content: "−"; }
+  details p { margin: 0 0 18px; color: var(--muted); }
+
+  /* CTA */
+  .cta { background: linear-gradient(120deg, var(--primary), #1a6fd6); color: #fff; border-radius: 18px; padding: 52px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .cta h2 { margin: 0 0 8px; font-size: 28px; }
+  .cta p { margin: 0; color: #dbe6f7; }
+  .cta .actions { display: flex; gap: 12px; flex-shrink: 0; }
+
+  /* Footer */
+  footer { background: #0a1730; color: #a9b6cc; padding: 64px 0 24px; font-size: 14.5px; }
+  footer .cols { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 32px; }
+  footer h5 { color: #fff; font-size: 15px; margin: 0 0 16px; }
+  footer ul { list-style: none; padding: 0; margin: 0; }
+  footer li { margin-bottom: 10px; }
+  footer a:hover { color: #fff; }
+  footer .logo { color: #fff; margin-bottom: 14px; }
+  footer .bottom { border-top: 1px solid #1d2c4a; margin-top: 48px; padding-top: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-size: 13px; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1000px) {
+    .hero .container, .split { grid-template-columns: 1fr; }
+    .cards, .news { grid-template-columns: repeat(2, 1fr); }
+    .steps { grid-template-columns: repeat(2, 1fr); row-gap: 40px; }
+    .step::after { display: none; }
+    footer .cols { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 820px) {
+    .menu-toggle { display: block; }
+    nav.main { display: none; position: absolute; top: 72px; left: 0; right: 0; background: #fff; border-bottom: 1px solid var(--border); }
+    nav.main.open { display: block; }
+    nav.main ul { flex-direction: column; gap: 0; padding: 8px 16px; }
+    nav.main a { display: block; padding: 12px 0; border: 0; }
+    .header-actions .btn-outline { display: none; }
+    .stats .grid { grid-template-columns: repeat(2, 1fr); }
+    .stat:nth-child(2) { border-right: 0; }
+    .stat:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+    .cta { flex-direction: column; align-items: flex-start; padding: 32px 24px; }
+  }
+  @media (max-width: 600px) {
+    .hero { padding: 56px 0 80px; }
+    .hero h1 { font-size: 32px; }
+    section { padding: 60px 0; }
+    .section-head h2, .split h2 { font-size: 26px; }
+    .cards, .news, .steps, footer .cols { grid-template-columns: 1fr; }
+    .header-actions .btn-primary { padding: 8px 14px; font-size: 14px; }
+    .cta .actions { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="container">
+    <a href="#ho-tro">Hotline: 1900 0000</a>
+    <a href="mailto:developer@example.com">developer@example.com</a>
+    <div class="lang"><a href="#" class="active">VI</a><span>|</span><a href="#">EN</a></div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="site">
+  <div class="container">
+    <a href="#" class="logo">
+      <span class="logo-mark">P</span>
+      <span>PayLink<small>Developer Portal</small></span>
+    </a>
+    <nav class="main" id="nav">
+      <ul>
+        <li><a href="#" class="active">Trang chủ</a></li>
+        <li><a href="#san-pham">Sản phẩm</a></li>
+        <li><a href="#tich-hop">Hướng dẫn tích hợp</a></li>
+        <li><a href="#tai-lieu">Tài liệu API</a></li>
+        <li><a href="#tin-tuc">Tin tức</a></li>
+        <li><a href="#ho-tro">Hỗ trợ</a></li>
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <a href="#" class="btn btn-outline">Đăng nhập</a>
+      <a href="#" class="btn btn-primary">Đăng ký</a>
+      <button class="menu-toggle" aria-label="Mở menu" onclick="document.getElementById('nav').classList.toggle('open')">☰</button>
+    </div>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div>
+      <span class="eyebrow">🚀 Môi trường Sandbox đã sẵn sàng</span>
+      <h1>Kết nối thanh toán nhanh chóng với bộ API mở</h1>
+      <p>Tài liệu đầy đủ, môi trường thử nghiệm miễn phí và đội ngũ hỗ trợ kỹ thuật giúp doanh nghiệp tích hợp dịch vụ thanh toán chỉ trong vài ngày.</p>
+      <div class="actions">
+        <a href="#tich-hop" class="btn btn-light">Bắt đầu tích hợp</a>
+        <a href="#tai-lieu" class="btn btn-ghost">Xem tài liệu API</a>
+      </div>
+    </div>
+    <div class="code-card" aria-hidden="true">
+      <div class="bar"><span></span><span></span><span></span></div>
+<pre><span class="c"># Tạo yêu cầu thanh toán QR</span>
+<span class="k">curl</span> -X POST https://sandbox.example.com/v1/qr/payments \
+  -H <span class="s">"Authorization: Bearer $ACCESS_TOKEN"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{
+    "orderId": "ORD-20261029-001",
+    "amount": 150000,
+    "currency": "VND",
+    "description": "Thanh toan don hang"
+  }'</span>
+
+<span class="c"># Phản hồi</span>
+{ <span class="n">"status"</span>: <span class="s">"SUCCESS"</span>, <span class="n">"qrData"</span>: <span class="s">"000201010212..."</span> }</pre>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="container">
+    <div class="grid">
+      <div class="stat"><b>30+</b><span>API sẵn sàng</span></div>
+      <div class="stat"><b>24/7</b><span>Sandbox hoạt động</span></div>
+      <div class="stat"><b>99.9%</b><span>Thời gian sẵn sàng</span></div>
+      <div class="stat"><b>500+</b><span>Đối tác đã tích hợp</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Products -->
+<section id="san-pham">
+  <div class="container">
+    <div class="section-head">
+      <span class="tag">Sản phẩm &amp; dịch vụ</span>
+      <h2>Bộ API cho mọi nhu cầu thanh toán</h2>
+      <p>Lựa chọn sản phẩm phù hợp với mô hình kinh doanh và bắt đầu thử nghiệm ngay trên môi trường Sandbox.</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3z"/></svg></div>
+        <h3>Thanh toán QR</h3>
+        <p>Sinh mã QR động/tĩnh theo chuẩn liên ngân hàng, nhận kết quả giao dịch tức thời qua webhook.</p>
+        <a href="#tai-lieu" class="more">Tìm hiểu thêm →</a>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg></div>
+        <h3>Chuyển tiền nhanh 24/7</h3>
+        <p>Chuyển tiền liên ngân hàng tới số tài khoản hoặc số thẻ, xử lý trong vài giây mọi lúc.</p>
+        <a href="#tai-lieu" class="more">Tìm hiểu thêm →</a>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>
+        <h3>Cổng thanh toán thẻ</h3>
+        <p>Chấp nhận thanh toán thẻ nội địa và quốc tế trên website, ứng dụng di động với xác thực an toàn.</p>
+        <a href="#tai-lieu" class="more">Tìm hiểu thêm →</a>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>Xác thực tài khoản</h3>
+        <p>Kiểm tra tên chủ tài khoản trước khi giao dịch, giảm sai sót và rủi ro gian lận.</p>
+        <a href="#tai-lieu" class="more">Tìm hiểu thêm →</a>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>
+        <h3>Thanh toán định kỳ <span class="badge">Mới</span></h3>
+        <p>Liên kết tài khoản một lần và tự động thu tiền định kỳ cho dịch vụ thuê bao, hoá đơn.</p>
+        <a href="#tai-lieu" class="more">Tìm hiểu thêm →</a>
+      </div>
+      <div class="card">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div>
+        <h3>Đối soát &amp; báo cáo</h3>
+        <p>Truy vấn trạng thái giao dịch, tải file đối soát hằng ngày và theo dõi số liệu trực quan.</p>
+        <a href="#tai-lieu" class="more">Tìm hiểu thêm →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Integration steps -->
+<section id="tich-hop" class="section-soft">
+  <div class="container">
+    <div class="section-head">
+      <span class="tag">Quy trình</span>
+      <h2>4 bước để bắt đầu tích hợp</h2>
+      <p>Từ đăng ký tài khoản đến vận hành chính thức, chúng tôi đồng hành cùng bạn ở mọi giai đoạn.</p>
+    </div>
+    <div class="steps">
+      <div class="step"><h4>Đăng ký tài khoản</h4><p>Tạo tài khoản nhà phát triển và khởi tạo ứng dụng đầu tiên.</p></div>
+      <div class="step"><h4>Lấy khoá API</h4><p>Nhận Client ID, Secret và chứng thư số cho môi trường Sandbox.</p></div>
+      <div class="step"><h4>Tích hợp &amp; kiểm thử</h4><p>Gọi API theo tài liệu, chạy các kịch bản kiểm thử mẫu.</p></div>
+      <div class="step"><h4>Go-live</h4><p>Hoàn tất nghiệm thu và chuyển sang môi trường Production.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Docs -->
+<section id="tai-lieu">
+  <div class="container split">
+    <div>
+      <span class="tag" style="color:var(--accent);font-weight:600;font-size:13px;letter-spacing:.1em;text-transform:uppercase">Tài liệu API</span>
+      <h2>Tài liệu rõ ràng, ví dụ trực quan</h2>
+      <p>Đặc tả theo chuẩn OpenAPI, có sẵn mã mẫu cho nhiều ngôn ngữ và công cụ thử API ngay trên trình duyệt.</p>
+      <ul class="check">
+        <li>Xác thực OAuth 2.0 và ký số thông điệp</li>
+        <li>Mã mẫu Java, .NET, Node.js, PHP, Python</li>
+        <li>Bộ sưu tập Postman và OpenAPI để tải về</li>
+        <li>Danh sách mã lỗi và hướng dẫn xử lý</li>
+      </ul>
+      <a href="#" class="btn btn-primary">Xem toàn bộ tài liệu</a>
+    </div>
+    <div class="doc-list">
+      <a href="#"><span><span class="method post">POST</span><span class="path">/oauth/token</span></span><span>→</span></a>
+      <a href="#"><span><span class="method post">POST</span><span class="path">/v1/qr/payments</span></span><span>→</span></a>
+      <a href="#"><span><span class="method get">GET</span><span class="path">/v1/payments/{id}</span></span><span>→</span></a>
+      <a href="#"><span><span class="method post">POST</span><span class="path">/v1/transfers</span></span><span>→</span></a>
+      <a href="#"><span><span class="method post">POST</span><span class="path">/v1/accounts/verify</span></span><span>→</span></a>
+      <a href="#"><span><span class="method get">GET</span><span class="path">/v1/reconciliation/files</span></span><span>→</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- News -->
+<section id="tin-tuc" class="section-soft">
+  <div class="container">
+    <div class="section-head">
+      <span class="tag">Cập nhật</span>
+      <h2>Tin tức dành cho nhà phát triển</h2>
+    </div>
+    <div class="news">
+      <article><div class="thumb">API v1.4</div><div class="body"><time>20/10/2026</time><h3>Phát hành phiên bản API mới với webhook có chữ ký</h3></div></article>
+      <article><div class="thumb">Bảo trì</div><div class="body"><time>12/10/2026</time><h3>Lịch bảo trì định kỳ môi trường Sandbox tháng 11</h3></div></article>
+      <article><div class="thumb">SDK</div><div class="body"><time>01/10/2026</time><h3>Ra mắt SDK Node.js và Python chính thức</h3></div></article>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="ho-tro">
+  <div class="container">
+    <div class="section-head">
+      <span class="tag">Hỗ trợ</span>
+      <h2>Câu hỏi thường gặp</h2>
+    </div>
+    <div class="faq">
+      <details open><summary>Sử dụng môi trường Sandbox có mất phí không?</summary><p>Không. Môi trường Sandbox được cung cấp miễn phí để bạn phát triển và kiểm thử.</p></details>
+      <details><summary>Mất bao lâu để hoàn tất tích hợp?</summary><p>Thông thường từ 1 đến 3 tuần tuỳ vào sản phẩm và mức độ sẵn sàng của hệ thống phía đối tác.</p></details>
+      <details><summary>Làm thế nào để chuyển sang môi trường Production?</summary><p>Sau khi hoàn thành các kịch bản kiểm thử bắt buộc, bạn gửi yêu cầu nghiệm thu ngay trong trang quản lý ứng dụng.</p></details>
+      <details><summary>Tôi cần hỗ trợ kỹ thuật thì liên hệ ở đâu?</summary><p>Gửi yêu cầu qua mục Hỗ trợ sau khi đăng nhập, hoặc email developer@example.com.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section style="padding-top:0">
+  <div class="container">
+    <div class="cta">
+      <div>
+        <h2>Sẵn sàng xây dựng cùng chúng tôi?</h2>
+        <p>Tạo tài khoản miễn phí và gọi API đầu tiên chỉ trong vài phút.</p>
+      </div>
+      <div class="actions">
+        <a href="#" class="btn btn-light">Đăng ký ngay</a>
+        <a href="#ho-tro" class="btn btn-ghost">Liên hệ tư vấn</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="cols">
+      <div>
+        <div class="logo"><span class="logo-mark">P</span><span>PayLink</span></div>
+        <p>Cổng thông tin dành cho nhà phát triển tích hợp dịch vụ thanh toán.</p>
+        <p>Địa chỉ: Số 1, Đường ABC, Hà Nội<br>Hotline: 1900 0000</p>
+      </div>
+      <div>
+        <h5>Sản phẩm</h5>
+        <ul><li><a href="#san-pham">Thanh toán QR</a></li><li><a href="#san-pham">Chuyển tiền nhanh</a></li><li><a href="#san-pham">Cổng thanh toán thẻ</a></li><li><a href="#san-pham">Xác thực tài khoản</a></li></ul>
+      </div>
+      <div>
+        <h5>Nhà phát triển</h5>
+        <ul><li><a href="#tai-lieu">Tài liệu API</a></li><li><a href="#tich-hop">Hướng dẫn tích hợp</a></li><li><a href="#">Sandbox</a></li><li><a href="#">SDK &amp; mã mẫu</a></li></ul>
+      </div>
+      <div>
+        <h5>Hỗ trợ</h5>
+        <ul><li><a href="#ho-tro">Câu hỏi thường gặp</a></li><li><a href="#">Gửi yêu cầu</a></li><li><a href="#">Điều khoản sử dụng</a></li><li><a href="#">Chính sách bảo mật</a></li></ul>
+      </div>
+    </div>
+    <div class="bottom">
+      <span>© 2026 PayLink. Bảo lưu mọi quyền.</span>
+      <span>Trạng thái hệ thống: <span style="color:#4ade80">● Hoạt động bình thường</span></span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
