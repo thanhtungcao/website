@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thư Ký AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#F5F7FA; --sheet:#FFFFFF; --ink:#0F1A2E; --muted:#5A6476; --line:#DCE1E9;
+  --blue:#2346C8; --blue-soft:#E7ECFB; --mark:#FFE58A; --stamp:#C8302B; --good:#167A55; --warn:#9A6400;
+  --f:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"Roboto Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0C1220; --sheet:#141C2E; --ink:#E8ECF4; --muted:#9AA4B6; --line:#26314A;
+  --blue:#8EA6FF; --blue-soft:#1C2848; --mark:#6B5A12; --stamp:#F0726B; --good:#5BD3A0; --warn:#E6B450; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.6 var(--f)}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.app{display:grid;grid-template-columns:340px 1fr;height:100%}
+aside{border-right:1px solid var(--line);background:var(--sheet);display:flex;flex-direction:column;min-height:0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.brand i{width:28px;height:28px;border-radius:7px;background:var(--blue);display:grid;place-items:center;color:var(--sheet);font:600 12px/1 var(--mono);font-style:normal}
+.box{padding:16px 20px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.box h2{margin:0;font:600 11.5px/1 var(--f);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+input[type=url],input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:6px;padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--sheet);font-weight:600;font-size:14px;cursor:pointer;text-decoration:none;color:var(--ink)}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:var(--sheet)}
+.btn:disabled{opacity:.6;cursor:wait}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;font-size:13.5px;color:var(--muted);cursor:pointer}
+.drop.over{border-color:var(--blue);background:var(--blue-soft)}
+.hint{font-size:12.5px;color:var(--muted)}
+.err{font-size:13px;color:var(--stamp)}
+.list{overflow:auto;flex:1;min-height:0}
+.mt{display:block;width:100%;text-align:left;padding:12px 20px;border:0;border-bottom:1px solid var(--line);background:transparent;cursor:pointer}
+.mt:hover{background:var(--paper)}
+.mt.on{background:var(--blue-soft)}
+.mt b{display:block;font-weight:600;font-size:14px}
+.mt span{font-size:12.5px;color:var(--muted)}
+.pill{display:inline-block;font:600 11px/1 var(--f);padding:4px 7px;border-radius:999px;margin-right:6px}
+.pill.ready{background:color-mix(in srgb,var(--good) 15%,transparent);color:var(--good)}
+.pill.error{background:color-mix(in srgb,var(--stamp) 15%,transparent);color:var(--stamp)}
+.pill.wait{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+main{overflow:auto;min-width:0}
+.empty{max-width:520px;margin:12vh auto;text-align:center;color:var(--muted);padding:0 20px}
+.empty h1{color:var(--ink);font-size:26px;margin:0 0 8px}
+.bar{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--paper);border-bottom:1px solid var(--line)}
+.bar h1{margin:0;font-size:19px}
+.bar small{display:block;color:var(--muted);font-size:12.5px;font-weight:400}
+.cols{display:grid;grid-template-columns:1.25fr 1fr;min-height:0}
+.minutes{padding:20px 24px;min-width:0}
+.tr{padding:20px 24px;border-left:1px solid var(--line);background:var(--sheet);min-width:0}
+.sec h3{margin:18px 0 8px;font:600 11.5px/1 var(--f);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sec h3:first-child{margin-top:0}
+.meta{font-size:14px;display:grid;gap:2px}
+.meta b{font-weight:600}
+.item{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:5px 0;font-size:14.5px}
+.ts{font:500 11px/1 var(--mono);color:var(--blue);background:var(--blue-soft);padding:3px 6px;border-radius:4px;border:0;cursor:pointer}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+.unc{background:linear-gradient(transparent 55%,var(--mark) 55%);font-weight:600}
+.line{font-size:14px;padding:7px 8px;margin:0 -8px;border-radius:5px}
+.line .t{font:400 11.5px var(--mono);color:var(--muted);margin-right:6px}
+.line .w{font-weight:600}
+.line.hit{background:var(--blue-soft)}
+.wait{padding:40px 24px;color:var(--muted)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+@media (max-width:900px){.app{grid-template-columns:1fr;height:auto}aside{border-right:0}.list{max-height:280px}.cols{grid-template-columns:1fr}.tr{border-left:0;border-top:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand"><i>TK</i>Thư Ký AI</div>
+    <form class="box" id="join">
+      <h2>Mời bot vào cuộc họp</h2>
+      <input type="url" id="url" placeholder="Dán link Zoom, Google Meet hoặc Teams" required>
+      <button class="btn pri" type="submit" id="join-btn">Mời Thư Ký AI tham gia</button>
+      <p class="err" id="join-err" hidden></p>
+    </form>
+    <div class="box">
+      <h2>Hoặc tải transcript lên</h2>
+      <label class="drop" id="drop" for="file">Kéo thả hoặc chọn file .vtt, .srt, .txt<br><span class="hint">Xuất từ Zoom, Teams, Google Meet</span></label>
+      <input type="file" id="file" accept=".vtt,.srt,.txt,.json" hidden>
+      <input type="text" id="ctx" placeholder="Ghi chú thêm (không bắt buộc)">
+      <p class="err" id="up-err" hidden></p>
+    </div>
+    <div class="list" id="list" aria-label="Danh sách cuộc họp"></div>
+  </aside>
+  <main id="main">
+    <div class="empty"><h1>Chưa chọn cuộc họp</h1><p>Mời bot vào cuộc họp sắp diễn ra, hoặc tải lên transcript của một cuộc họp đã qua. Biên bản sẽ sẵn sàng sau khoảng 1–2 phút.</p></div>
+  </main>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const STATUS = {ready:["ready","Sẵn sàng"], error:["error","Lỗi"], processing:["wait","Đang viết biên bản"], joining:["wait","Bot đang vào họp"], recording:["wait","Đang ghi"]};
+let current = null, timer = null;
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.detail || `Lỗi ${r.status}`);
+  return body;
+}
+
+function pill(st) { const [c, t] = STATUS[st] || ["wait", st]; return `<span class="pill ${c}">${t}</span>`; }
+
+async function loadList() {
+  const items = await api("/api/meetings");
+  $("#list").innerHTML = items.map((m) => `
+    <button class="mt ${m.id === current ? "on" : ""}" data-id="${m.id}">
+      <b>${esc(m.title || (m.platform ? "Cuộc họp " + m.platform : "Cuộc họp mới"))}</b>
+      <span>${pill(m.status)}${new Date(m.created_at).toLocaleString("vi-VN")}${m.action_count ? " · " + m.action_count + " việc" : ""}</span>
+    </button>`).join("") || `<p class="hint" style="padding:16px 20px">Chưa có cuộc họp nào.</p>`;
+  document.querySelectorAll(".mt").forEach((b) => b.onclick = () => open(b.dataset.id));
+}
+
+function toSec(ts) { return ts.split(":").reduce((a, p) => a * 60 + Number(p), 0); }
+function fmt(s) { s = Math.floor(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60; const p = (n) => String(n).padStart(2,"0"); return h ? `${h}:${p(m)}:${p(x)}` : `${p(m)}:${p(x)}`; }
+
+function jump(ts) {
+  const target = toSec(ts);
+  const lines = [...document.querySelectorAll(".line")];
+  let best = null;
+  for (const l of lines) { if (Number(l.dataset.s) <= target + 1) best = l; }
+  lines.forEach((l) => l.classList.remove("hit"));
+  if (best) { best.classList.add("hit"); best.scrollIntoView({block:"center", behavior:"smooth"}); }
+}
+
+function points(title, arr, unc) {
+  if (!arr || !arr.length) return "";
+  return `<h3>${title}</h3>` + arr.map((p) => `<div class="item"><span>${mark(p.text, unc)}</span><button class="ts" data-ts="${esc(p.timestamp)}">${esc(p.timestamp)}</button></div>`).join("");
+}
+function mark(text, unc) {
+  let out = esc(text);
+  for (const u of unc) { if (u.term) out = out.split(esc(u.term)).join(`<span class="unc" title="${esc(u.reason)}">${esc(u.term)}</span>`); }
+  return out;
+}
+
+function render(m) {
+  const title = m.minutes?.title || (m.platform ? "Cuộc họp " + m.platform : "Cuộc họp");
+  const sub = `${new Date(m.created_at).toLocaleString("vi-VN")}${m.platform ? " · " + esc(m.platform) : ""}`;
+  let actions = "";
+  if (m.minutes) actions = `<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/api/meetings/${m.id}/minutes.md" target="_blank">Markdown</a><a class="btn pri" href="/api/meetings/${m.id}/minutes.docx">Xuất Word</a></div>`;
+  let body;
+  if (m.status === "error") body = `<div class="wait"><p class="err">${esc(m.error)}</p></div>`;
+  else if (!m.minutes) body = `<div class="wait"><span class="spin"></span>${STATUS[m.status]?.[1] || "Đang xử lý"}… Trang tự cập nhật.</div>`;
+  else {
+    const x = m.minutes, unc = x.uncertain || [];
+    body = `<div class="cols"><div class="minutes sec">
+      <h3>Thông tin</h3>
+      <div class="meta"><div><b>Mục đích:</b> ${esc(x.purpose)}</div><div><b>Chủ trì:</b> ${esc(x.chair)}</div><div><b>Tham dự:</b> ${esc(x.attendees.join(", "))}</div></div>
+      ${points("Quyết định", x.decisions, unc)}
+      ${x.action_items.length ? `<h3>Việc cần làm</h3><div style="overflow-x:auto"><table><tr><th>Việc</th><th>Phụ trách</th><th>Hạn</th><th></th></tr>${x.action_items.map((a) => `<tr><td>${mark(a.task, unc)}</td><td>${esc(a.owner)}</td><td>${esc(a.deadline)}</td><td><button class="ts" data-ts="${esc(a.timestamp)}">${esc(a.timestamp)}</button></td></tr>`).join("")}</table></div>` : ""}
+      ${points("Nội dung chính", x.summary, unc)}
+      ${points("Vấn đề còn mở", x.open_questions, unc)}
+      ${points("Rủi ro", x.risks, unc)}
+      ${unc.length ? `<h3>Cần kiểm tra lại</h3>` + unc.map((u) => `<div class="item"><span><span class="unc">${esc(u.term)}</span>: ${esc(u.reason)}</span><button class="ts" data-ts="${esc(u.timestamp)}">${esc(u.timestamp)}</button></div>`).join("") : ""}
+    </div><div class="tr sec"><h3>Transcript</h3>${(m.transcript || []).map((s) => `<div class="line" data-s="${s.start}"><span class="t">${fmt(s.start)}</span><span class="w">${esc(s.speaker)}:</span> ${esc(s.text)}</div>`).join("")}</div></div>`;
+  }
+  $("#main").innerHTML = `<div class="bar"><h1>${esc(title)}<small>${sub}</small></h1>${actions}</div>${body}`;
+  document.querySelectorAll(".ts").forEach((b) => b.onclick = () => jump(b.dataset.ts));
+}
+
+async function open(id) {
+  current = id; clearTimeout(timer);
+  let m;
+  try {
+    m = await api(`/api/meetings/${id}`);
+    if (!m.minutes && m.status !== "error" && m.source === "bot") m = await api(`/api/meetings/${id}/refresh`, {method:"POST"});
+  } catch (e) { $("#main").innerHTML = `<div class="wait"><p class="err">${esc(e.message)}</p></div>`; return; }
+  render(m); loadList();
+  if (!m.minutes && m.status !== "error") timer = setTimeout(() => open(id), m.source === "bot" ? 10000 : 3000);
+}
+
+$("#join").onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = $("#join-btn"), err = $("#join-err");
+  btn.disabled = true; err.hidden = true;
+  try { const m = await api("/api/meetings/join", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({meeting_url: $("#url").value})}); $("#url").value = ""; open(m.id); }
+  catch (x) { err.textContent = x.message; err.hidden = false; }
+  finally { btn.disabled = false; }
+};
+
+async function upload(file) {
+  const err = $("#up-err"); err.hidden = true;
+  const fd = new FormData(); fd.append("file", file); fd.append("context", $("#ctx").value);
+  try { const m = await api("/api/meetings/upload", {method:"POST", body: fd}); $("#ctx").value = ""; open(m.id); }
+  catch (x) { err.textContent = x.message; err.hidden = false; }
+}
+$("#file").onchange = (e) => e.target.files[0] && upload(e.target.files[0]);
+const drop = $("#drop");
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); e.dataTransfer.files[0] && upload(e.dataTransfer.files[0]); };
+
+loadList();
+</script>
+</body>
+</html>
