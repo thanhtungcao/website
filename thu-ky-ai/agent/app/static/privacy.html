@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quyền riêng tư · Thư Ký AI</title>
+<style>
+:root{--paper:#F5F7FA;--ink:#0F1A2E;--muted:#5A6476;--line:#DCE1E9;--blue:#2346C8}
+@media (prefers-color-scheme:dark){:root{--paper:#0C1220;--ink:#E8ECF4;--muted:#9AA4B6;--line:#26314A;--blue:#8EA6FF;color-scheme:dark}}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.7 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:680px;margin:0 auto;padding:40px max(16px,env(safe-area-inset-left,0px))}
+h1{font-size:28px;margin:0 0 4px}h2{font-size:18px;margin:28px 0 6px}
+p,li{color:var(--muted)}a{color:var(--blue)}
+</style>
+</head>
+<body>
+<main>
+<h1>Quyền riêng tư và điều khoản sử dụng</h1>
+<p>Thư Ký AI là phần mềm mã nguồn mở, dùng miễn phí. Trang này mô tả cách bản cài đặt này xử lý dữ liệu của bạn.</p>
+<h2>Dữ liệu chúng tôi xử lý</h2>
+<ul>
+<li>Transcript bạn tải lên, hoặc bản ghi cuộc họp mà bot ghi lại khi bạn mời.</li>
+<li>Biên bản được tạo ra từ transcript đó.</li>
+<li>Một mã ngẫu nhiên lưu trong cookie để nhận biết trình duyệt của bạn. Chúng tôi không yêu cầu tên, email hay mật khẩu.</li>
+</ul>
+<h2>Ai thấy được dữ liệu</h2>
+<p>Cuộc họp chỉ hiển thị trên trình duyệt đã tạo ra nó. Nếu xóa cookie, bạn sẽ không mở lại được các biên bản cũ. Hãy tải biên bản về nếu cần lưu lâu dài.</p>
+<p>Để viết biên bản, nội dung transcript được gửi tới Claude API của Anthropic. Khi bạn mời bot, cuộc họp được ghi qua dịch vụ Recall.ai. Nội dung không được dùng để huấn luyện mô hình AI.</p>
+<h2>Thời gian lưu</h2>
+<p>Cuộc họp và biên bản tự động bị xóa sau một khoảng thời gian do bản cài đặt quy định (mặc định 30 ngày). Bạn có thể xóa bất cứ lúc nào bằng nút Xóa.</p>
+<h2>Khóa Claude API của bạn</h2>
+<p>Nếu bạn nhập khóa riêng, khóa chỉ được lưu trong trình duyệt của bạn và gửi kèm mỗi lần tạo biên bản. Máy chủ dùng khóa cho đúng yêu cầu đó và không lưu lại.</p>
+<h2>Trách nhiệm của người dùng</h2>
+<ul>
+<li>Thông báo và có sự đồng ý của người tham dự trước khi ghi âm cuộc họp.</li>
+<li>Không tải lên nội dung mà bạn không có quyền chia sẻ.</li>
+<li>Kiểm tra lại biên bản trước khi sử dụng chính thức. AI có thể nhận dạng sai tên, con số, ngày tháng.</li>
+</ul>
+<h2>Không bảo đảm</h2>
+<p>Phần mềm được cung cấp nguyên trạng, không kèm bảo đảm. Bản dùng miễn phí có giới hạn số biên bản mỗi ngày và có thể tạm ngừng để bảo trì.</p>
+<p><a href="/">Quay lại Thư Ký AI</a></p>
+</main>
+</body>
+</html>

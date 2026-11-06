@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Thư Ký AI</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Thư Ký AI ghi cuộc họp Zoom, Google Meet, Microsoft Teams và tạo biên bản tiếng Việt trong 2 phút, kèm theo dõi việc cần làm.">
+<meta name="description" content="Thư Ký AI viết biên bản họp tiếng Việt từ cuộc họp Zoom, Google Meet, Microsoft Teams trong 2 phút. Miễn phí, mã nguồn mở.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Noto+Serif:ital,wght@0,400;0,600;1,400&family=Roboto+Mono:wght@400;500&display=swap">
@@ -188,7 +188,7 @@ section{padding-block:72px}
 .tier li{padding-left:20px;position:relative}
 .tier li::before{content:"";position:absolute;left:2px;top:.45em;width:8px;height:5px;border-left:2px solid var(--good);border-bottom:2px solid var(--good);transform:rotate(-45deg)}
 .tier .btn{justify-content:center;margin-top:auto}
-@media (max-width:960px){.tiers{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:960px){.tiers{grid-template-columns:1fr!important}}
 @media (max-width:540px){.tiers{grid-template-columns:1fr}}
 .price-note{margin-top:20px;font-size:14px;color:var(--muted)}
 
@@ -240,10 +240,10 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
       <a href="#cach-hoat-dong">Cách hoạt động</a>
       <a href="#tinh-nang">Tính năng</a>
       <a href="#bao-mat">Bảo mật</a>
-      <a href="#bang-gia">Bảng giá</a>
+      <a href="#mien-phi">Miễn phí</a>
       <a href="#hoi-dap">Hỏi đáp</a>
     </nav>
-    <a class="btn pri" href="#dang-ky">Dùng thử miễn phí</a>
+    <a class="btn pri" href="/app">Dùng miễn phí</a>
   </div>
 </header>
 
@@ -253,12 +253,12 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
       <div>
         <div class="eyebrow">Trợ lý họp cho doanh nghiệp Việt</div>
         <h1 style="margin-top:16px">Họp xong, <em>biên bản đã sẵn sàng.</em></h1>
-        <p class="lede">Thư Ký AI ghi cuộc họp Zoom, Google Meet và Microsoft Teams, viết biên bản tiếng Việt trong 2 phút và nhắc từng người làm đúng việc đã giao.</p>
+        <p class="lede">Tải lên transcript từ Zoom, Google Meet hoặc Microsoft Teams. Thư Ký AI viết biên bản tiếng Việt trong khoảng 2 phút, có quyết định, việc cần làm và mốc thời gian để kiểm chứng. Miễn phí, không cần đăng ký.</p>
         <div class="cta-row">
-          <a class="btn pri" href="#dang-ky">Dùng thử miễn phí</a>
-          <a class="btn" href="#cach-hoat-dong">Xem cách hoạt động</a>
+          <a class="btn pri" href="/app">Dùng miễn phí ngay</a>
+          <a class="btn" href="https://github.com/thanhtungcao/website/tree/main/thu-ky-ai/agent" target="_blank" rel="noopener">Mã nguồn trên GitHub</a>
         </div>
-        <div class="platforms"><span>Dùng với</span><span class="chip">Zoom</span><span class="chip">Google Meet</span><span class="chip">Microsoft Teams</span><span class="chip">Họp trực tiếp</span></div>
+        <div class="platforms"><span>Dùng với</span><span class="chip">Zoom</span><span class="chip">Google Meet</span><span class="chip">Microsoft Teams</span><span class="chip">File .vtt, .srt, .txt</span></div>
       </div>
       <div class="doc" aria-label="Ví dụ biên bản do Thư Ký AI tạo">
         <span class="status">Biên bản sẵn sàng sau 1 phút 48 giây</span>
@@ -293,9 +293,9 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
     <div class="wrap">
       <div class="sec-head"><div class="eyebrow">Cách hoạt động</div><h2>Ba bước, không thay đổi cách bạn họp</h2></div>
       <div class="steps">
-        <div class="step"><div class="k">Bước 1</div><h3>Kết nối lịch</h3><p>Đồng bộ Google Calendar hoặc Outlook. Thư Ký AI tự tham gia các cuộc họp bạn chọn, hoặc ghi trực tiếp từ máy tính mà không cần bot.</p></div>
-        <div class="step"><div class="k">Bước 2</div><h3>Họp như bình thường</h3><p>Nói tiếng Việt, chen tiếng Anh, giọng Bắc, Trung hay Nam đều được. AI phân biệt từng người nói và gắn đúng tên.</p></div>
-        <div class="step"><div class="k">Bước 3</div><h3>Duyệt và gửi</h3><p>Biên bản có quyết định, việc cần làm và hạn chót. Duyệt một lần bấm, gửi email hoặc xuất Word để ký.</p></div>
+        <div class="step"><div class="k">Bước 1</div><h3>Đưa cuộc họp vào</h3><p>Tải file transcript mà Zoom, Teams hoặc Google Meet xuất ra. Nếu bản cài đặt có bật bot, bạn chỉ cần dán link họp để bot tự vào ghi.</p></div>
+        <div class="step"><div class="k">Bước 2</div><h3>AI viết biên bản</h3><p>Claude đọc toàn bộ cuộc họp, kể cả đoạn nói lẫn tiếng Anh, và tách ra quyết định, việc cần làm, người phụ trách, hạn chót.</p></div>
+        <div class="step"><div class="k">Bước 3</div><h3>Kiểm tra và xuất Word</h3><p>Bấm vào mốc thời gian để đối chiếu câu nói gốc, kiểm tra các chỗ được đánh dấu vàng, rồi xuất Word theo thể thức biên bản hành chính.</p></div>
       </div>
     </div>
   </section>
@@ -306,11 +306,11 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
 
       <div class="feat">
         <div class="copy">
-          <h3>Hiểu tiếng Việt như người trong công ty</h3>
-          <p>Mô hình nhận dạng giọng nói được huấn luyện riêng cho tiếng Việt và cách người Việt nói lẫn tiếng Anh ở công sở.</p>
+          <h3>Mỗi ý đều kiểm chứng được</h3>
+          <p>Biên bản bên trái, transcript bên phải. Bấm vào mốc thời gian là thấy ngay câu nói gốc.</p>
           <ul>
-            <li>Tự học tên nhân sự, khách hàng, sản phẩm từ lịch và danh bạ</li>
-            <li>Mỗi lần bạn sửa một từ, các cuộc họp sau sẽ đúng hơn</li>
+            <li>Tách rõ điều đã thống nhất và điều còn đang bàn</li>
+            <li>Không tự đoán người phụ trách hay hạn chót khi cuộc họp không nói rõ</li>
             <li>Chỗ AI không chắc được <span class="mark">đánh dấu vàng</span> để bạn kiểm tra</li>
           </ul>
         </div>
@@ -319,13 +319,14 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
           <div class="line"><span class="tm">17:22</span><span class="who">Hùng:</span> Bên mình chốt được deadline ký thì anh xin thêm discount.</div>
           <div class="line on"><span class="tm">17:40</span><span class="who">Lan:</span> Ok, em đề xuất 8% nếu ký trước ngày 15/11 nhé.</div>
           <div class="line"><span class="tm">17:55</span><span class="who">Hùng:</span> Được, vậy mình thống nhất vậy. Còn KPI triển khai thì để anh Quân review.</div>
-          <div class="dict"><span><b>Đã học</b> An Phát</span><span><b>Đã học</b> anh Quân</span><span><b>Đã học</b> gói Pro Max</span></div>
+          <div class="dict"><span><b>Cần kiểm tra</b> anh Quân hay anh Quang?</span><span><b>Cần kiểm tra</b> 8% hay 18%?</span></div>
         </div>
       </div>
 
       <div class="feat flip">
         <div class="copy">
-          <h3>Việc được giao không bị quên</h3>
+          <span class="pill src">Sắp ra mắt</span>
+          <h3 style="margin-top:10px">Việc được giao không bị quên</h3>
           <p>Mỗi việc cần làm có người phụ trách, hạn chót và liên kết về đúng khoảnh khắc nó được giao.</p>
           <ul>
             <li>Đẩy sang Jira, Asana, Trello, Base.vn</li>
@@ -345,7 +346,8 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
 
       <div class="feat">
         <div class="copy">
-          <h3>Hỏi lại mọi cuộc họp đã qua</h3>
+          <span class="pill src">Sắp ra mắt</span>
+          <h3 style="margin-top:10px">Hỏi lại mọi cuộc họp đã qua</h3>
           <p>Thư Ký AI nhớ toàn bộ lịch sử họp của nhóm. Câu trả lời luôn kèm trích dẫn đến cuộc họp và phút cụ thể.</p>
           <ul>
             <li>Brief tự động 15 phút trước mỗi cuộc họp</li>
@@ -365,7 +367,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
 
   <section style="padding-top:24px">
     <div class="wrap">
-      <div class="sec-head"><div class="eyebrow">Mẫu biên bản</div><h2>Đúng định dạng cho từng loại cuộc họp</h2><p>AI tự nhận diện loại cuộc họp và chọn mẫu phù hợp. Doanh nghiệp có thể tải lên mẫu riêng.</p></div>
+      <div class="sec-head"><div class="eyebrow">Mẫu biên bản</div><h2>Đúng định dạng cho từng loại cuộc họp</h2><p>AI tự nhận diện loại cuộc họp. File Word xuất ra theo thể thức biên bản hành chính, có sẵn phần quốc hiệu, bảng phân công và chữ ký.</p></div>
       <div class="tpl">
         <div class="star"><h3>Hành chính</h3><p>Theo thể thức Nghị định 30/2020, xuất Word để ký và đóng dấu.</p></div>
         <div><h3>Gọi bán hàng</h3><p>Nhu cầu, phản đối, ngân sách, bước tiếp theo.</p></div>
@@ -378,67 +380,38 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
 
   <section class="band" id="bao-mat">
     <div class="wrap">
-      <div class="sec-head"><div class="eyebrow">Bảo mật</div><h2>Nội dung cuộc họp là tài sản của bạn</h2><p>Thiết kế để bộ phận pháp chế và CNTT có thể phê duyệt.</p></div>
+      <div class="sec-head"><div class="eyebrow">Bảo mật</div><h2>Nội dung cuộc họp là của bạn</h2><p>Không tài khoản, không theo dõi. Cần kiểm soát hoàn toàn thì tự cài đặt trên máy chủ của mình.</p></div>
       <div class="sec-grid">
-        <div><h3>Dữ liệu lưu tại Việt Nam</h3><p>Máy chủ đặt trong nước, đáp ứng Luật Bảo vệ dữ liệu cá nhân.</p></div>
+        <div><h3>Chỉ bạn thấy cuộc họp của mình</h3><p>Biên bản gắn với trình duyệt đã tạo ra nó, người khác không mở được.</p></div>
         <div><h3>Không huấn luyện AI</h3><p>Nội dung họp của bạn không được dùng để huấn luyện mô hình chung.</p></div>
-        <div><h3>Mã hóa đầu cuối</h3><p>Mã hóa khi truyền và khi lưu. Phân quyền theo phòng ban.</p></div>
-        <div><h3>Thông báo ghi âm</h3><p>Người tham dự luôn được báo khi cuộc họp đang được ghi.</p></div>
+        <div><h3>Tự xóa sau 30 ngày</h3><p>Hoặc xóa ngay bằng một nút bấm. Tải biên bản về nếu cần lưu lâu dài.</p></div>
+        <div><h3>Mã nguồn mở</h3><p>Ai cũng xem được phần mềm xử lý dữ liệu thế nào. Giấy phép MIT.</p></div>
       </div>
     </div>
   </section>
 
-  <section id="bang-gia">
+  <section id="mien-phi">
     <div class="wrap">
-      <div class="sec-head"><div class="eyebrow">Bảng giá</div><h2>Rẻ hơn một giờ làm việc của bạn mỗi tháng</h2><p>Giá đã gồm VAT. Thanh toán bằng VietQR, MoMo, thẻ hoặc chuyển khoản, có hóa đơn điện tử.</p></div>
-      <div class="toggle" role="group" aria-label="Chu kỳ thanh toán">
-        <button type="button" id="bill-month" aria-pressed="true">Theo tháng</button>
-        <button type="button" id="bill-year" aria-pressed="false">Theo năm <span class="save">−20%</span></button>
-      </div>
-      <div class="tiers">
-        <div class="tier">
-          <h3>Miễn phí</h3><div class="for">Để thử thói quen mới</div>
-          <div class="price">0đ</div><div class="billing">Không cần thẻ</div>
-          <ul><li>5 cuộc họp mỗi tháng</li><li>Lưu biên bản 14 ngày</li><li>Mẫu giao ban và 1:1</li></ul>
-          <a class="btn" href="#dang-ky" data-plan="Miễn phí">Bắt đầu</a>
-        </div>
-        <div class="tier">
-          <h3>Pro</h3><div class="for">Cho cá nhân và quản lý</div>
-          <div class="price"><span data-m="249.000đ" data-y="199.000đ">249.000đ</span> <small>/người/tháng</small></div><div class="billing" data-m="Thanh toán hằng tháng" data-y="Thanh toán 2.388.000đ mỗi năm">Thanh toán hằng tháng</div>
-          <ul><li>25 giờ họp mỗi tháng</li><li>Lưu không giới hạn</li><li>Mọi mẫu biên bản, xuất Word</li><li>Hỏi đáp lịch sử họp</li><li>Nhắc việc qua email</li></ul>
-          <a class="btn" href="#dang-ky" data-plan="Pro">Dùng thử 14 ngày</a>
-        </div>
+      <div class="sec-head"><div class="eyebrow">Miễn phí</div><h2>Miễn phí cho mọi người</h2><p>Không quảng cáo, không cần thẻ, không cần đăng ký. Chọn cách dùng phù hợp với bạn.</p></div>
+      <div class="tiers" style="grid-template-columns:repeat(3,1fr)">
         <div class="tier hot">
-          <span class="badge">Phổ biến nhất</span>
-          <h3>Business</h3><div class="for">Cho nhóm từ 3 người</div>
-          <div class="price"><span data-m="449.000đ" data-y="359.000đ">449.000đ</span> <small>/người/tháng</small></div><div class="billing" data-m="Thanh toán hằng tháng" data-y="Thanh toán 4.308.000đ mỗi người mỗi năm">Thanh toán hằng tháng</div>
-          <ul><li>Mọi tính năng của Pro</li><li>Không gian và bộ nhớ chung của nhóm</li><li>Jira, Asana, Base.vn, Zalo</li><li>Mẫu biên bản riêng của công ty</li><li>Quy trình duyệt, quản trị người dùng</li></ul>
-          <a class="btn pri" href="#dang-ky" data-plan="Business">Dùng thử 14 ngày</a>
+          <span class="badge">Bắt đầu ở đây</span>
+          <h3>Dùng trên web</h3><div class="for">Mở trình duyệt là dùng</div>
+          <div class="price">0đ</div><div class="billing">Giới hạn số biên bản mỗi ngày</div>
+          <ul><li>Không cần tài khoản</li><li>Xuất Word và Markdown</li><li>Tự xóa sau 30 ngày</li></ul>
+          <a class="btn pri" href="/app">Dùng ngay</a>
         </div>
         <div class="tier">
-          <h3>Enterprise</h3><div class="for">Ngân hàng, tập đoàn, cơ quan</div>
-          <div class="price">Liên hệ</div><div class="billing">Từ 25 triệu đồng/tháng</div>
-          <ul><li>Đăng nhập một lần (SSO)</li><li>Lưu riêng hoặc on-premise</li><li>Cam kết dịch vụ (SLA)</li><li>Hợp đồng và hóa đơn riêng</li></ul>
-          <a class="btn" href="#dang-ky" data-plan="Enterprise">Trao đổi với chúng tôi</a>
+          <h3>Dùng khóa API riêng</h3><div class="for">Cho người họp nhiều</div>
+          <div class="price">0đ</div><div class="billing">Trả phí API trực tiếp cho Anthropic theo mức dùng</div>
+          <ul><li>Không giới hạn số biên bản</li><li>Khóa chỉ lưu trong trình duyệt của bạn</li><li>Nhập trong mục Cài đặt</li></ul>
+          <a class="btn" href="/app">Mở Cài đặt</a>
         </div>
-      </div>
-      <p class="price-note">Dùng quá giờ trong gói: 49.000đ cho mỗi 10 giờ thêm, không bị gián đoạn cuộc họp. Hoàn tiền trong 30 ngày nếu không hài lòng.</p>
-    </div>
-  </section>
-
-  <section style="padding-top:0">
-    <div class="wrap">
-      <div class="founding">
-        <div>
-          <div class="eyebrow">Thành viên sáng lập</div>
-          <h2>Giảm 50% trong 12 tháng đầu cho 20 khách hàng đầu tiên</h2>
-          <p>Bạn dùng sản phẩm sớm, góp ý trực tiếp với đội ngũ sáng lập và giữ mức giá này suốt năm đầu. Hết 20 suất thì ưu đãi kết thúc.</p>
-          <div class="cta-row"><a class="btn pri" href="#dang-ky" data-plan="Thành viên sáng lập">Giữ một suất</a></div>
-        </div>
-        <div class="seats">
-          <div class="bar"><i id="seat-bar"></i></div>
-          <div class="lbl"><span id="seat-txt">Còn 20/20 suất</span><span>Pro từ 124.500đ</span></div>
-          <ul><li>Onboarding 1:1 với nhà sáng lập</li><li>Mẫu biên bản riêng làm miễn phí</li><li>Ưu tiên tính năng bạn cần</li></ul>
+        <div class="tier">
+          <h3>Tự cài đặt</h3><div class="for">Cho doanh nghiệp, cơ quan</div>
+          <div class="price">0đ</div><div class="billing">Giấy phép MIT</div>
+          <ul><li>Chạy trên máy chủ của bạn</li><li>Dữ liệu không rời hạ tầng nội bộ</li><li>Bật bot vào họp qua Recall.ai</li><li>Triển khai bằng Docker</li></ul>
+          <a class="btn" href="https://github.com/thanhtungcao/website/tree/main/thu-ky-ai/agent" target="_blank" rel="noopener">Hướng dẫn cài đặt</a>
         </div>
       </div>
     </div>
@@ -448,81 +421,30 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
     <div class="wrap">
       <div class="sec-head"><div class="eyebrow">Hỏi đáp</div><h2>Câu hỏi thường gặp</h2></div>
       <div class="faq">
-        <details><summary>Tôi có cần cài gì không?</summary><p>Không bắt buộc. Kết nối lịch là bot tự tham gia cuộc họp. Nếu công ty bạn không cho phép bot, hãy cài app desktop để ghi trực tiếp từ máy tính.</p></details>
-        <details><summary>Độ chính xác với tiếng Việt thế nào?</summary><p>Mô hình được huấn luyện riêng cho tiếng Việt, giọng ba miền và câu nói lẫn tiếng Anh. Chỗ AI không chắc được đánh dấu để bạn kiểm tra, và mỗi lần bạn sửa thì các cuộc họp sau sẽ chính xác hơn.</p></details>
-        <details><summary>Người tham dự có biết cuộc họp đang được ghi không?</summary><p>Có. Thư Ký AI luôn thông báo trong cuộc họp và trong lời mời. Bạn có thể dừng ghi bất cứ lúc nào.</p></details>
-        <details><summary>Dữ liệu của tôi được lưu ở đâu?</summary><p>Tại máy chủ ở Việt Nam, được mã hóa khi truyền và khi lưu. Nội dung họp không dùng để huấn luyện mô hình chung. Gói Enterprise có thể lưu riêng hoặc on-premise.</p></details>
-        <details><summary>Tôi có lấy được hóa đơn VAT không?</summary><p>Có. Hóa đơn điện tử được xuất tự động sau mỗi lần thanh toán, theo thông tin doanh nghiệp bạn nhập.</p></details>
-        <details><summary>Nếu dùng hết giờ trong tháng thì sao?</summary><p>Cuộc họp vẫn được ghi bình thường. Phần vượt tính 49.000đ cho mỗi 10 giờ, hoặc bạn nâng gói bất cứ lúc nào.</p></details>
+        <details><summary>Có thật sự miễn phí không?</summary><p>Có. Phần mềm là mã nguồn mở. Bản web cho mỗi người một số biên bản miễn phí mỗi ngày. Nếu cần nhiều hơn, bạn nhập khóa Claude API của riêng mình và trả phí API trực tiếp cho Anthropic, hoặc tự cài đặt.</p></details>
+        <details><summary>Lấy transcript từ Zoom, Teams, Google Meet thế nào?</summary><p>Zoom: bật Audio transcript trong cài đặt ghi hình cloud, tải file .vtt sau cuộc họp. Microsoft Teams: bật Transcription khi họp, sau đó tải transcript dạng .vtt hoặc .docx từ mục Recap (dán nội dung .docx vào file .txt). Google Meet: bật Transcripts, file transcript được lưu vào Google Drive của người tổ chức.</p></details>
+        <details><summary>Độ chính xác với tiếng Việt thế nào?</summary><p>Biên bản do Claude viết từ transcript, nên chất lượng phụ thuộc vào transcript gốc. Những tên riêng, con số, ngày tháng có dấu hiệu nhận dạng sai sẽ được liệt kê ở mục Cần kiểm tra lại. Luôn đọc lại biên bản trước khi dùng chính thức.</p></details>
+        <details><summary>Người tham dự có biết cuộc họp đang được ghi không?</summary><p>Khi bot tham gia, bot gửi tin nhắn thông báo đang ghi cho mọi người. Dù dùng cách nào, bạn có trách nhiệm báo cho người tham dự trước khi ghi âm.</p></details>
+        <details><summary>Dữ liệu của tôi được lưu ở đâu?</summary><p>Bản web lưu biên bản trên máy chủ cloud của bản cài đặt này trong tối đa 30 ngày. Nội dung được gửi tới Claude API để viết biên bản và không dùng để huấn luyện mô hình. Muốn dữ liệu nằm trong hạ tầng của mình, hãy tự cài đặt. Chi tiết ở trang <a href="/privacy">Quyền riêng tư</a>.</p></details>
+                <details><summary>Nếu dùng hết lượt miễn phí trong ngày thì sao?</summary><p>Lượt được làm mới mỗi ngày. Bạn cũng có thể nhập khóa Claude API riêng trong mục Cài đặt để dùng không giới hạn.</p></details>
       </div>
     </div>
   </section>
 
-  <section class="signup" id="dang-ky">
+  <section class="signup" id="bat-dau">
     <div class="wrap">
       <div>
         <div class="eyebrow">Bắt đầu</div>
-        <h2 style="margin-top:12px">Nhận biên bản đầu tiên ngay trong cuộc họp tới</h2>
-        <p>Đăng ký mất một phút. Chúng tôi sẽ liên hệ để kết nối lịch và cài đặt mẫu biên bản cho bạn.</p>
+        <h2 style="margin-top:12px">Biên bản cho cuộc họp gần nhất của bạn, ngay bây giờ</h2>
+        <p>Tải transcript lên, nhận biên bản sau khoảng 2 phút. Không cần đăng ký.</p>
       </div>
-      <form id="signup" novalidate>
-        <div class="row2">
-          <div class="field"><label for="f-name">Họ và tên</label><input id="f-name" name="name" autocomplete="name" required></div>
-          <div class="field"><label for="f-company">Công ty</label><input id="f-company" name="company" autocomplete="organization"></div>
-        </div>
-        <div class="row2">
-          <div class="field"><label for="f-email">Email công việc</label><input id="f-email" name="email" type="email" autocomplete="email" required></div>
-          <div class="field"><label for="f-phone">Số Zalo</label><input id="f-phone" name="phone" type="tel" autocomplete="tel"></div>
-        </div>
-        <div class="row2">
-          <div class="field"><label for="f-plan">Gói quan tâm</label>
-            <select id="f-plan" name="plan"><option>Thành viên sáng lập</option><option>Miễn phí</option><option>Pro</option><option selected>Business</option><option>Enterprise</option></select></div>
-          <div class="field"><label for="f-platform">Nền tảng họp chính</label>
-            <select id="f-platform" name="platform"><option>Google Meet</option><option>Zoom</option><option>Microsoft Teams</option><option>Nhiều nền tảng</option></select></div>
-        </div>
-        <button class="btn pri" type="submit" style="justify-content:center">Đăng ký dùng thử</button>
-        <p class="msg" id="f-msg" role="status"></p>
-      </form>
+      <div class="cta-row" style="margin-top:0"><a class="btn pri" href="/app">Mở Thư Ký AI</a><a class="btn" href="https://github.com/thanhtungcao/website/tree/main/thu-ky-ai/agent" target="_blank" rel="noopener">Tự cài đặt</a></div>
     </div>
   </section>
 </main>
 
 <footer>
-  <div class="wrap"><span>© 2026 Thư Ký AI</span><span>Dữ liệu lưu tại Việt Nam · Không dùng để huấn luyện AI</span></div>
+  <div class="wrap"><span>Thư Ký AI · Mã nguồn mở, giấy phép MIT</span><span><a href="/privacy">Quyền riêng tư</a> · <a href="https://github.com/thanhtungcao/website/tree/main/thu-ky-ai/agent" target="_blank" rel="noopener">GitHub</a></span></div>
 </footer>
-
-<script>
-(function(){
-  var m=document.getElementById('bill-month'), y=document.getElementById('bill-year');
-  function setBill(yearly){
-    m.setAttribute('aria-pressed',String(!yearly)); y.setAttribute('aria-pressed',String(yearly));
-    document.querySelectorAll('[data-m][data-y]').forEach(function(el){ el.textContent = yearly ? el.dataset.y : el.dataset.m; });
-  }
-  m.addEventListener('click',function(){setBill(false)});
-  y.addEventListener('click',function(){setBill(true)});
-
-  // Số suất sáng lập đã bán: cập nhật khi có khách thật.
-  var SOLD=0, TOTAL=20;
-  document.getElementById('seat-bar').style.width=(SOLD/TOTAL*100)+'%';
-  document.getElementById('seat-txt').textContent='Còn '+(TOTAL-SOLD)+'/'+TOTAL+' suất';
-
-  var plan=document.getElementById('f-plan');
-  document.querySelectorAll('[data-plan]').forEach(function(a){
-    a.addEventListener('click',function(){ plan.value=a.dataset.plan; });
-  });
-
-  var form=document.getElementById('signup'), msg=document.getElementById('f-msg');
-  form.addEventListener('submit',function(e){
-    e.preventDefault();
-    var name=form.name.value.trim(), email=form.email.value.trim();
-    if(!name){ msg.className='msg err'; msg.textContent='Vui lòng nhập họ và tên.'; form.name.focus(); return; }
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ msg.className='msg err'; msg.textContent='Email chưa đúng định dạng, ví dụ: ten@congty.vn.'; form.email.focus(); return; }
-    // TODO: gửi dữ liệu tới backend hoặc dịch vụ form (Netlify Forms, Google Sheets...).
-    msg.className='msg ok';
-    msg.textContent='Đã nhận đăng ký của '+name+'. Chúng tôi sẽ liên hệ qua '+email+' trong 24 giờ làm việc.';
-    form.reset(); plan.value='Business';
-  });
-})();
-</script>
 </body>
 </html>

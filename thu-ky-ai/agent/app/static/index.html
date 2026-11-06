@@ -17,6 +17,7 @@
   --paper:#0C1220; --sheet:#141C2E; --ink:#E8ECF4; --muted:#9AA4B6; --line:#26314A;
   --blue:#8EA6FF; --blue-soft:#1C2848; --mark:#6B5A12; --stamp:#F0726B; --good:#5BD3A0; --warn:#E6B450; color-scheme:dark}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.6 var(--f)}
 button,input{font:inherit;color:inherit}
@@ -72,14 +73,26 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:8px}
 @keyframes s{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.foot{padding:12px 20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.foot a,.link{color:var(--muted);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;font-size:12.5px}
+.quota{font-size:12.5px;color:var(--muted)}
+.quota b{color:var(--ink)}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--sheet);color:var(--ink);padding:22px;max-width:440px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(15,26,46,.45)}
+dialog h2{margin:0 0 6px;font-size:18px}
+dialog p{margin:0 0 12px;font-size:13.5px;color:var(--muted)}
+dialog label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
+dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.btn.danger{color:var(--stamp)}
 @media (max-width:900px){.app{grid-template-columns:1fr;height:auto}aside{border-right:0}.list{max-height:280px}.cols{grid-template-columns:1fr}.tr{border-left:0;border-top:1px solid var(--line)}}
 </style>
 </head>
 <body>
 <div class="app">
   <aside>
-    <div class="brand"><i>TK</i>Thư Ký AI</div>
-    <form class="box" id="join">
+    <a class="brand" href="/" style="text-decoration:none;color:inherit"><i>TK</i>Thư Ký AI</a>
+    <form class="box" id="join" hidden>
       <h2>Mời bot vào cuộc họp</h2>
       <input type="url" id="url" placeholder="Dán link Zoom, Google Meet hoặc Teams" required>
       <button class="btn pri" type="submit" id="join-btn">Mời Thư Ký AI tham gia</button>
@@ -93,16 +106,40 @@ th{font-size:12px;color:var(--muted);font-weight:600}
       <p class="err" id="up-err" hidden></p>
     </div>
     <div class="list" id="list" aria-label="Danh sách cuộc họp"></div>
+    <div class="foot"><span class="quota" id="quota"></span><button class="link" id="open-settings" type="button">Cài đặt</button><a href="/privacy" target="_blank">Quyền riêng tư</a></div>
   </aside>
   <main id="main">
-    <div class="empty"><h1>Chưa chọn cuộc họp</h1><p>Mời bot vào cuộc họp sắp diễn ra, hoặc tải lên transcript của một cuộc họp đã qua. Biên bản sẽ sẵn sàng sau khoảng 1–2 phút.</p></div>
+    <div class="empty"><h1>Chưa chọn cuộc họp</h1><p>Tải lên transcript của một cuộc họp (Zoom, Teams, Google Meet đều xuất được file .vtt). Biên bản sẽ sẵn sàng sau khoảng 1–2 phút.</p><p class="hint">Cuộc họp chỉ hiển thị trên trình duyệt này và tự xóa sau một thời gian.</p></div>
   </main>
 </div>
+<dialog id="settings">
+  <form method="dialog" id="settings-form">
+    <h2>Cài đặt</h2>
+    <p>Khóa Claude API của riêng bạn được lưu trong trình duyệt này và chỉ gửi kèm khi tạo biên bản. Máy chủ không lưu khóa. Khi có khóa riêng, bạn dùng không giới hạn số biên bản.</p>
+    <label for="s-key">Khóa Claude API (không bắt buộc)</label>
+    <input id="s-key" type="password" autocomplete="off" placeholder="sk-ant-...">
+    <label for="s-org">Tên cơ quan in trên biên bản Word</label>
+    <input id="s-org" type="text" placeholder="Ví dụ: Công ty Cổ phần ABC">
+    <div class="row"><button class="btn" value="cancel" type="submit">Đóng</button><button class="btn pri" id="s-save" type="button">Lưu</button></div>
+  </form>
+</dialog>
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const STATUS = {ready:["ready","Sẵn sàng"], error:["error","Lỗi"], processing:["wait","Đang viết biên bản"], joining:["wait","Bot đang vào họp"], recording:["wait","Đang ghi"]};
-let current = null, timer = null;
+let current = null, timer = null, cfg = {};
+const ls = {get(k){try{return localStorage.getItem(k)||""}catch{return ""}}, set(k,v){try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch{}}};
+function keyHeader(){ const k = ls.get("tk_key"); return k ? {"X-Anthropic-Key": k} : {}; }
+async function loadConfig(){
+  try { cfg = await api("/api/config"); } catch { return; }
+  $("#join").hidden = !cfg.bot_enabled;
+  const own = !!ls.get("tk_key");
+  $("#quota").innerHTML = own ? "Đang dùng <b>khóa riêng</b>, không giới hạn"
+    : cfg.server_key ? (cfg.free_daily_limit > 0 ? `Hôm nay: <b>${cfg.used_today}/${cfg.free_daily_limit}</b> biên bản miễn phí` : "Miễn phí, không giới hạn")
+    : "Cần nhập khóa Claude API trong Cài đặt";
+}
+$("#open-settings").onclick = () => { $("#s-key").value = ls.get("tk_key"); $("#s-org").value = ls.get("tk_org"); $("#settings").showModal(); };
+$("#s-save").onclick = () => { ls.set("tk_key", $("#s-key").value.trim()); ls.set("tk_org", $("#s-org").value.trim()); $("#settings").close(); loadConfig(); };
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
@@ -149,7 +186,8 @@ function render(m) {
   const title = m.minutes?.title || (m.platform ? "Cuộc họp " + m.platform : "Cuộc họp");
   const sub = `${new Date(m.created_at).toLocaleString("vi-VN")}${m.platform ? " · " + esc(m.platform) : ""}`;
   let actions = "";
-  if (m.minutes) actions = `<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/api/meetings/${m.id}/minutes.md" target="_blank">Markdown</a><a class="btn pri" href="/api/meetings/${m.id}/minutes.docx">Xuất Word</a></div>`;
+  if (m.minutes) actions = `<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/api/meetings/${m.id}/minutes.md" target="_blank">Markdown</a><a class="btn pri" href="/api/meetings/${m.id}/minutes.docx?org=${encodeURIComponent(ls.get("tk_org"))}">Xuất Word</a><button class="btn danger" id="del">Xóa</button></div>`;
+  else actions = `<button class="btn danger" id="del">Xóa</button>`;
   let body;
   if (m.status === "error") body = `<div class="wait"><p class="err">${esc(m.error)}</p></div>`;
   else if (!m.minutes) body = `<div class="wait"><span class="spin"></span>${STATUS[m.status]?.[1] || "Đang xử lý"}… Trang tự cập nhật.</div>`;
@@ -168,6 +206,12 @@ function render(m) {
   }
   $("#main").innerHTML = `<div class="bar"><h1>${esc(title)}<small>${sub}</small></h1>${actions}</div>${body}`;
   document.querySelectorAll(".ts").forEach((b) => b.onclick = () => jump(b.dataset.ts));
+  const del = $("#del");
+  if (del) del.onclick = async () => {
+    if (del.dataset.armed !== "1") { del.dataset.armed = "1"; del.textContent = "Bấm lần nữa để xóa"; return; }
+    await api(`/api/meetings/${m.id}`, {method:"DELETE"}); current = null; clearTimeout(timer);
+    $("#main").innerHTML = `<div class="empty"><h1>Đã xóa cuộc họp</h1><p>Biên bản và transcript đã bị xóa khỏi máy chủ.</p></div>`; loadList();
+  };
 }
 
 async function open(id) {
@@ -177,7 +221,7 @@ async function open(id) {
     m = await api(`/api/meetings/${id}`);
     if (!m.minutes && m.status !== "error" && m.source === "bot") m = await api(`/api/meetings/${id}/refresh`, {method:"POST"});
   } catch (e) { $("#main").innerHTML = `<div class="wait"><p class="err">${esc(e.message)}</p></div>`; return; }
-  render(m); loadList();
+  render(m); loadList(); if (m.status === "ready" || m.status === "error") loadConfig();
   if (!m.minutes && m.status !== "error") timer = setTimeout(() => open(id), m.source === "bot" ? 10000 : 3000);
 }
 
@@ -193,7 +237,7 @@ $("#join").onsubmit = async (e) => {
 async function upload(file) {
   const err = $("#up-err"); err.hidden = true;
   const fd = new FormData(); fd.append("file", file); fd.append("context", $("#ctx").value);
-  try { const m = await api("/api/meetings/upload", {method:"POST", body: fd}); $("#ctx").value = ""; open(m.id); }
+  try { const m = await api("/api/meetings/upload", {method:"POST", body: fd, headers: keyHeader()}); loadConfig(); $("#ctx").value = ""; open(m.id); }
   catch (x) { err.textContent = x.message; err.hidden = false; }
 }
 $("#file").onchange = (e) => e.target.files[0] && upload(e.target.files[0]);
@@ -202,7 +246,7 @@ drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
 drop.ondragleave = () => drop.classList.remove("over");
 drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); e.dataTransfer.files[0] && upload(e.dataTransfer.files[0]); };
 
-loadList();
+loadConfig(); loadList();
 </script>
 </body>
 </html>

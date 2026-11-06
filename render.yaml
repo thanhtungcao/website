@@ -1,0 +1,28 @@
+# Triển khai Thư Ký AI lên Render bằng Blueprint: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: thu-ky-ai
+    runtime: docker
+    plan: free
+    dockerfilePath: ./thu-ky-ai/agent/Dockerfile
+    dockerContext: ./thu-ky-ai/agent
+    healthCheckPath: /healthz
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - thu-ky-ai/agent/**
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false          # nhập khi tạo dịch vụ; để trống nếu chỉ cho dùng khóa riêng
+      - key: FREE_DAILY_LIMIT
+        value: "5"
+      - key: GLOBAL_DAILY_LIMIT
+        value: "200"
+      - key: RETENTION_DAYS
+        value: "30"
+      - key: DB_PATH
+        value: /tmp/thukyai.db   # gói free không có ổ đĩa bền; xem README
+      - key: RECALL_API_KEY
+        sync: false
+      - key: RECALL_WEBHOOK_SECRET
+        sync: false

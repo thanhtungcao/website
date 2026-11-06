@@ -74,10 +74,12 @@ def generate_minutes(
     glossary: list[str] | None = None,
     context: str = "",
     client: anthropic.Anthropic | None = None,
+    api_key: str | None = None,
 ) -> Minutes:
     if not segments:
         raise MinutesError("Transcript trống, không có gì để tạo biên bản.")
-    client = client or anthropic.Anthropic()
+    if client is None:
+        client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
     glossary = glossary if glossary is not None else config.GLOSSARY
 
     parts = []
@@ -100,7 +102,7 @@ def generate_minutes(
             output_format=Minutes,
         )
     except anthropic.AuthenticationError as e:
-        raise MinutesError("Khóa ANTHROPIC_API_KEY không hợp lệ hoặc chưa được đặt.") from e
+        raise MinutesError("Khóa Claude API không hợp lệ. Kiểm tra lại khóa trong phần Cài đặt." if api_key else "Máy chủ chưa được cấu hình khóa Claude API hợp lệ.") from e
     except anthropic.RateLimitError as e:
         raise MinutesError("Claude API đang giới hạn tốc độ. Thử lại sau ít phút.") from e
     except anthropic.APIStatusError as e:

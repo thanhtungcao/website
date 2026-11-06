@@ -5,37 +5,96 @@ Chạy:  uvicorn app.main:app --reload
 from __future__ import annotations
 
 import logging
+import os
+import secrets
+import time
 from datetime import date, datetime
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel
 
-from . import recall, store
+from . import config, recall, store, webhook
 from .minutes import Minutes, MinutesError, generate_minutes
 from .render import to_docx, to_markdown
 from .transcript import Segment, parse_recall_json, parse_transcript
 
 log = logging.getLogger("thukyai")
-app = FastAPI(title="Thư Ký AI")
+app = FastAPI(title="Thư Ký AI", docs_url=None, redoc_url=None)
 STATIC = Path(__file__).parent / "static"
+COOKIE = "tk_ws"
 
 ACTIVE_BOT_STATES = {"ready", "joining_call", "in_waiting_room", "in_call_not_recording",
                      "in_call_recording", "recording_permission_allowed", "queued"}
 
 
-def _process(mid: str, segments: list[Segment], context: str = "") -> None:
-    """Chạy nền: tạo biên bản từ transcript và lưu lại."""
+def server_has_key() -> bool:
+    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+
+
+# ---------- Không gian làm việc ẩn danh theo trình duyệt ----------
+
+_last_purge = 0.0
+
+
+@app.middleware("http")
+async def workspace_cookie(request: Request, call_next):
+    global _last_purge
+    if time.time() - _last_purge > 3600:
+        _last_purge = time.time()
+        store.purge_old()
+    ws = request.cookies.get(COOKIE)
+    fresh = not ws or len(ws) != 32
+    if fresh:
+        ws = secrets.token_hex(16)
+    request.state.ws = ws
+    response = await call_next(request)
+    if fresh:
+        response.set_cookie(COOKIE, ws, max_age=365 * 86400, httponly=True, samesite="lax",
+                            secure=config.SECURE_COOKIES)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    return response
+
+
+def owner(request: Request) -> str:
+    return request.state.ws
+
+
+def client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    return fwd.split(",")[0].strip() or (request.client.host if request.client else "unknown")
+
+
+def take_quota(request: Request, own_key: str | None) -> list[str] | None:
+    """Trả về danh sách subject đã trừ lượt (để hoàn lại khi lỗi), hoặc None nếu dùng khóa riêng."""
+    if own_key:
+        return None
+    if not server_has_key():
+        raise HTTPException(400, "Bản cài đặt này chưa có khóa Claude API chung. Hãy nhập khóa của bạn trong phần Cài đặt.")
+    subjects = [f"ws:{owner(request)}", f"ip:{client_ip(request)}"]
+    if not store.try_consume(subjects, config.FREE_DAILY_LIMIT, config.GLOBAL_DAILY_LIMIT):
+        raise HTTPException(429, f"Bạn đã dùng hết {config.FREE_DAILY_LIMIT} biên bản miễn phí hôm nay. "
+                                 "Quay lại vào ngày mai, hoặc nhập khóa Claude API của riêng bạn để dùng không giới hạn.")
+    return subjects
+
+
+def _process(mid: str, segments: list[Segment], context: str = "", api_key: str | None = None,
+             charged: list[str] | None = None) -> None:
+    """Chạy nền: tạo biên bản từ transcript và lưu lại. Khóa riêng của người dùng chỉ nằm trong bộ nhớ."""
     store.update(mid, status="processing", transcript=[s.to_dict() for s in segments])
     try:
-        minutes = generate_minutes(segments, context=context)
+        minutes = generate_minutes(segments, context=context, api_key=api_key)
         store.update(mid, status="ready", minutes=minutes.model_dump(), error=None)
+        return
     except MinutesError as e:
         store.update(mid, status="error", error=str(e))
-    except Exception:  # lỗi không lường trước vẫn phải hiện cho người dùng
+    except Exception:
         log.exception("Tạo biên bản thất bại cho %s", mid)
-        store.update(mid, status="error", error="Có lỗi khi tạo biên bản. Xem log máy chủ.")
+        store.update(mid, status="error", error="Có lỗi khi tạo biên bản. Vui lòng thử lại.")
+    if charged:
+        store.refund(charged)  # lỗi thì không tính lượt
 
 
 def _finish_bot_meeting(m: dict, background: BackgroundTasks | None = None) -> dict:
@@ -50,11 +109,11 @@ def _finish_bot_meeting(m: dict, background: BackgroundTasks | None = None) -> d
         return store.get(m["id"])
     url = recall.transcript_url(bot)
     if not url:
-        store.update(m["id"], status="processing")  # cuộc họp đã kết thúc, transcript đang được xử lý
+        store.update(m["id"], status="processing")
         return store.get(m["id"])
     segments = parse_recall_json(recall.download_transcript(url))
+    store.update(m["id"], status="processing", transcript=[s.to_dict() for s in segments])
     if background is not None:
-        store.update(m["id"], status="processing")
         background.add_task(_process, m["id"], segments)
     else:
         _process(m["id"], segments)
@@ -64,20 +123,54 @@ def _finish_bot_meeting(m: dict, background: BackgroundTasks | None = None) -> d
 # ---------- Trang web ----------
 
 @app.get("/", include_in_schema=False)
-def index():
+def landing():
+    return FileResponse(STATIC / "landing.html")
+
+
+@app.get("/app", include_in_schema=False)
+def web_app():
     return FileResponse(STATIC / "index.html")
+
+
+@app.get("/privacy", include_in_schema=False)
+def privacy():
+    return FileResponse(STATIC / "privacy.html")
+
+
+@app.get("/healthz", include_in_schema=False)
+def healthz():
+    return {"ok": True}
 
 
 # ---------- API ----------
 
+@app.get("/api/config")
+def get_config(request: Request):
+    return {
+        "free_daily_limit": config.FREE_DAILY_LIMIT,
+        "used_today": store.usage_today(f"ws:{owner(request)}"),
+        "server_key": server_has_key(),
+        "bot_enabled": bool(config.RECALL_API_KEY),
+        "retention_days": config.RETENTION_DAYS,
+        "max_upload_mb": round(config.MAX_UPLOAD_BYTES / 1_000_000, 1),
+    }
+
+
 @app.post("/api/meetings/upload")
-async def upload(background: BackgroundTasks, file: UploadFile = File(...), context: str = Form("")):
-    raw = (await file.read()).decode("utf-8", errors="replace")
-    segments = parse_transcript(raw, file.filename or "")
+async def upload(request: Request, background: BackgroundTasks, file: UploadFile = File(...),
+                 context: str = Form(""), x_anthropic_key: str | None = Header(None)):
+    data = await file.read(config.MAX_UPLOAD_BYTES + 1)
+    if len(data) > config.MAX_UPLOAD_BYTES:
+        raise HTTPException(413, f"File quá lớn. Giới hạn {config.MAX_UPLOAD_BYTES // 1_000_000} MB.")
+    segments = parse_transcript(data.decode("utf-8", errors="replace"), file.filename or "")
     if not segments:
         raise HTTPException(400, "Không đọc được nội dung transcript. Hỗ trợ .vtt, .srt, .txt hoặc JSON của Recall.ai.")
-    m = store.create("upload", status="processing", platform="Tải lên")
-    background.add_task(_process, m["id"], segments, context)
+    if sum(len(s.text) for s in segments) > config.MAX_TRANSCRIPT_CHARS:
+        raise HTTPException(413, "Transcript quá dài cho một biên bản. Hãy chia thành nhiều phần.")
+    key = (x_anthropic_key or "").strip() or None
+    charged = take_quota(request, key)
+    m = store.create("upload", owner(request), status="processing", platform="Tải lên")
+    background.add_task(_process, m["id"], segments, context[:2000], key, charged)
     return m
 
 
@@ -87,21 +180,32 @@ class JoinRequest(BaseModel):
 
 
 @app.post("/api/meetings/join")
-def join(req: JoinRequest):
+def join(req: JoinRequest, request: Request):
+    if not config.RECALL_API_KEY:
+        raise HTTPException(400, "Bản cài đặt này chưa bật tính năng mời bot. Bạn vẫn có thể tải transcript lên.")
+    if not recall.detect_platform(req.meeting_url):
+        raise HTTPException(400, "Link họp không hợp lệ. Hỗ trợ Zoom, Google Meet và Microsoft Teams.")
+    charged = take_quota(request, None)
     try:
         bot = recall.create_bot(req.meeting_url, req.join_at)
     except recall.RecallError as e:
+        store.refund(charged or [])
         raise HTTPException(400, str(e))
-    return store.create("bot", status="joining", platform=recall.detect_platform(req.meeting_url),
+    return store.create("bot", owner(request), status="joining", platform=recall.detect_platform(req.meeting_url),
                         meeting_url=req.meeting_url, bot_id=bot["id"])
 
 
-@app.post("/api/meetings/{mid}/refresh")
-def refresh(mid: str, background: BackgroundTasks):
-    m = store.get(mid)
+def _mine(mid: str, request: Request) -> dict:
+    m = store.get(mid, owner(request))
     if not m:
         raise HTTPException(404, "Không tìm thấy cuộc họp.")
-    if m["source"] == "bot" and m["status"] in {"joining", "recording", "processing"} and not m["minutes"]:
+    return m
+
+
+@app.post("/api/meetings/{mid}/refresh")
+def refresh(mid: str, request: Request, background: BackgroundTasks):
+    m = _mine(mid, request)
+    if m["source"] == "bot" and m["status"] in {"joining", "recording", "processing"} and not m["minutes"] and not m["transcript"]:
         try:
             return _finish_bot_meeting(m, background)
         except recall.RecallError as e:
@@ -111,11 +215,17 @@ def refresh(mid: str, background: BackgroundTasks):
 
 @app.post("/api/webhooks/recall")
 async def recall_webhook(request: Request, background: BackgroundTasks):
-    """Đặt URL này trong bảng điều khiển Recall.ai cho sự kiện trạng thái bot và transcript."""
-    payload = await request.json()
+    """Đặt URL này trong bảng điều khiển Recall.ai cho sự kiện trạng thái bot."""
+    body = await request.body()
+    if config.RECALL_WEBHOOK_SECRET and not webhook.verify(config.RECALL_WEBHOOK_SECRET, dict(request.headers), body):
+        raise HTTPException(401, "Chữ ký webhook không hợp lệ.")
+    try:
+        payload = await request.json()
+    except ValueError:
+        raise HTTPException(400, "Body không phải JSON.")
     bot_id = recall.bot_id_from_webhook(payload)
     m = store.by_bot(bot_id) if bot_id else None
-    if m and not m["minutes"]:
+    if m and not m["minutes"] and not m["transcript"]:
         try:
             _finish_bot_meeting(m, background)
         except recall.RecallError:
@@ -124,34 +234,38 @@ async def recall_webhook(request: Request, background: BackgroundTasks):
 
 
 @app.get("/api/meetings")
-def list_meetings():
-    return store.list_all()
+def list_meetings(request: Request):
+    return store.list_for(owner(request))
 
 
 @app.get("/api/meetings/{mid}")
-def get_meeting(mid: str):
-    m = store.get(mid)
-    if not m:
+def get_meeting(mid: str, request: Request):
+    return _mine(mid, request)
+
+
+@app.delete("/api/meetings/{mid}")
+def delete_meeting(mid: str, request: Request):
+    if not store.delete(mid, owner(request)):
         raise HTTPException(404, "Không tìm thấy cuộc họp.")
-    return m
+    return {"ok": True}
 
 
-def _ready(mid: str) -> tuple[dict, Minutes, date]:
-    m = store.get(mid)
-    if not m or not m["minutes"]:
+def _ready(mid: str, request: Request) -> tuple[dict, Minutes, date]:
+    m = _mine(mid, request)
+    if not m["minutes"]:
         raise HTTPException(404, "Biên bản chưa sẵn sàng.")
     return m, Minutes.model_validate(m["minutes"]), datetime.fromisoformat(m["created_at"]).date()
 
 
 @app.get("/api/meetings/{mid}/minutes.md")
-def minutes_md(mid: str):
-    m, minutes, d = _ready(mid)
+def minutes_md(mid: str, request: Request):
+    m, minutes, d = _ready(mid, request)
     return PlainTextResponse(to_markdown(minutes, d, m["platform"] or ""), media_type="text/markdown; charset=utf-8")
 
 
 @app.get("/api/meetings/{mid}/minutes.docx")
-def minutes_docx(mid: str, org: str = ""):
-    m, minutes, d = _ready(mid)
-    data = to_docx(minutes, d, m["platform"] if m["source"] == "bot" else "", org)
+def minutes_docx(mid: str, request: Request, org: str = ""):
+    m, minutes, d = _ready(mid, request)
+    data = to_docx(minutes, d, m["platform"] if m["source"] == "bot" else "", org[:120])
     return Response(data, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     headers={"Content-Disposition": f'attachment; filename="bien-ban-{mid}.docx"'})
