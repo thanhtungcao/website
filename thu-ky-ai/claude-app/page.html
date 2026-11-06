@@ -1,0 +1,360 @@
+<title>Thư Ký AI</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: công cụ hai cột. Trái: đưa cuộc họp vào và lịch sử. Phải: biên bản và transcript liên kết theo mốc thời gian. */
+:root{
+  --paper:#F5F7FA; --sheet:#FFFFFF; --ink:#0F1A2E; --muted:#5A6476; --line:#DCE1E9;
+  --blue:#2346C8; --blue-ink:#1A36A0; --blue-soft:#E7ECFB; --mark:#FFE58A; --stamp:#C8302B; --good:#167A55; --warn:#9A6400;
+  --f:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"Roboto Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#0C1220; --sheet:#141C2E; --ink:#E8ECF4; --muted:#9AA4B6; --line:#26314A;
+  --blue:#8EA6FF; --blue-ink:#B3C3FF; --blue-soft:#1C2848; --mark:#6B5A12; --stamp:#F0726B; --good:#5BD3A0; --warn:#E6B450; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0C1220; --sheet:#141C2E; --ink:#E8ECF4; --muted:#9AA4B6; --line:#26314A;
+  --blue:#8EA6FF; --blue-ink:#B3C3FF; --blue-soft:#1C2848; --mark:#6B5A12; --stamp:#F0726B; --good:#5BD3A0; --warn:#E6B450; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.6 var(--f);-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+header.top{border-bottom:1px solid var(--line);background:var(--sheet)}
+header.top .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;padding-block:14px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}
+.brand i{width:30px;height:30px;border-radius:8px;background:var(--blue);display:grid;place-items:center;color:var(--sheet);font:600 12px/1 var(--mono);font-style:normal}
+.tag{font-size:13px;color:var(--muted)}
+.tag b{color:var(--good);font-weight:600}
+
+.grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:20px;padding-block:20px 48px;align-items:start}
+@media (max-width:920px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:12px;min-width:0}
+.side{display:grid;gap:16px}
+.pad{padding:18px}
+h2.lbl{margin:0 0 10px;font:600 11.5px/1 var(--f);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.drop{display:block;border:1.5px dashed var(--line);border-radius:10px;padding:18px 14px;text-align:center;font-size:14px;color:var(--muted);cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--blue);background:var(--blue-soft)}
+.drop b{color:var(--ink);font-weight:600}
+.or{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);margin:12px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+textarea{width:100%;min-height:130px;resize:vertical;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font:400 13px/1.5 var(--mono)}
+input[type=text]{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.field{display:grid;gap:4px;margin-top:10px}
+.field label{font-size:12.5px;font-weight:600}
+.loaded{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px;margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--blue-soft)}
+.loaded button{border:0;background:none;color:var(--blue);cursor:pointer;font-size:13px;text-decoration:underline;padding:0}
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:6px;padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--sheet);font-weight:600;font-size:14px;cursor:pointer;color:var(--ink);text-decoration:none;transition:background .15s}
+.btn:hover{background:var(--paper)}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:var(--sheet)}
+.btn.pri:hover{background:var(--blue-ink);border-color:var(--blue-ink)}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.full{width:100%;margin-top:14px;padding:12px}
+.linkbtn{border:0;background:none;padding:0;color:var(--blue);cursor:pointer;font-size:13px;text-decoration:underline}
+.hint{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+.err{font-size:13.5px;color:var(--stamp);margin:10px 0 0}
+.hist{display:grid}
+.hi{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 18px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;cursor:pointer;width:100%}
+.hi:hover{background:var(--paper)}
+.hi.on{background:var(--blue-soft)}
+.hi b{display:block;font-weight:600;font-size:14px}
+.hi span{font-size:12px;color:var(--muted)}
+
+.res-bar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-start;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+.res-bar h1{margin:0;font-size:20px;line-height:1.3;text-wrap:balance}
+.res-bar small{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:2px}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.badge{display:inline-block;font:600 11px/1 var(--f);padding:5px 8px;border-radius:999px;background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn);margin-bottom:6px;letter-spacing:.02em}
+.cols{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+@media (max-width:1100px){.cols{grid-template-columns:minmax(0,1fr)}}
+.mins{padding:18px 20px 24px;min-width:0}
+.tr{padding:18px 20px 24px;border-left:1px solid var(--line);background:var(--paper);min-width:0;max-height:760px;overflow:auto;border-radius:0 0 12px 0}
+@media (max-width:1100px){.tr{border-left:0;border-top:1px solid var(--line);max-height:420px;border-radius:0 0 12px 12px}}
+.sec h3{margin:20px 0 8px;font:600 11.5px/1 var(--f);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sec h3:first-child{margin-top:0}
+.meta{display:grid;gap:3px;font-size:14px}
+.meta b{font-weight:600}
+.item{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0;font-size:14.5px}
+.ts{font:500 11px/1 var(--mono);color:var(--blue);background:var(--blue-soft);padding:4px 6px;border-radius:4px;border:0;cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ts:hover{background:color-mix(in srgb,var(--blue) 22%,transparent)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+.unc{background:linear-gradient(transparent 55%,var(--mark) 55%);font-weight:600}
+.line{font-size:14px;padding:7px 8px;margin:0 -8px;border-radius:6px;transition:background .3s}
+.line .t{font:400 11.5px var(--mono);color:var(--muted);margin-right:6px;font-variant-numeric:tabular-nums}
+.line .w{font-weight:600}
+.line.hit{background:var(--blue-soft)}
+.state{padding:56px 24px;text-align:center;color:var(--muted)}
+.state h2{color:var(--ink);font-size:20px;margin:0 0 6px}
+.spin{display:inline-block;width:22px;height:22px;border:2.5px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:s 1s linear infinite;margin-bottom:12px}
+@keyframes s{to{transform:rotate(360deg)}}
+.prog{font:400 12.5px var(--mono);margin-top:6px}
+footer{padding-block:0 32px;font-size:12.5px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-size:14px;max-width:calc(100% - 32px)}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><i>TK</i>Thư Ký AI</div>
+    <div class="tag"><b>Miễn phí</b> · Chạy bằng tài khoản Claude của bạn · Biên bản tiếng Việt từ Zoom, Meet, Teams</div>
+  </div>
+</header>
+
+<div class="wrap grid">
+  <div class="side">
+    <section class="card pad" aria-labelledby="in-h">
+      <h2 class="lbl" id="in-h">Đưa cuộc họp vào</h2>
+      <label class="drop" id="drop" for="file"><b>Chọn hoặc kéo thả file transcript</b><br>.vtt, .srt, .txt xuất từ Zoom, Teams, Google Meet</label>
+      <input type="file" id="file" accept=".vtt,.srt,.txt,.json" hidden>
+      <div class="loaded" id="loaded" hidden><span id="loaded-txt"></span><button type="button" id="clear">Bỏ</button></div>
+      <div class="or">hoặc dán nội dung</div>
+      <textarea id="paste" placeholder="[00:05] Hùng: Chào mọi người, hôm nay mình họp để...&#10;[00:13] Lan: Dạ, bên khách hàng đã phản hồi..."></textarea>
+      <p class="hint">Mỗi dòng dạng "Tên: nội dung", có hoặc không kèm mốc thời gian. <button type="button" class="linkbtn" id="use-sample">Dùng cuộc họp mẫu</button></p>
+      <div class="field"><label for="glossary">Tên riêng, thuật ngữ cần viết đúng</label><input type="text" id="glossary" placeholder="Ví dụ: An Phát, anh Quân, gói Pro Max"></div>
+      <div class="field"><label for="org">Tên cơ quan in trên biên bản Word</label><input type="text" id="org" placeholder="Ví dụ: Công ty Cổ phần ABC"></div>
+      <button class="btn pri full" type="button" id="go">Tạo biên bản</button>
+      <p class="err" id="in-err" hidden></p>
+      <p class="hint" id="cap-note" hidden></p>
+    </section>
+    <section class="card" aria-labelledby="h-h">
+      <div class="pad" style="padding-bottom:10px"><h2 class="lbl" id="h-h" style="margin:0">Biên bản của bạn</h2></div>
+      <div class="hist" id="hist"><p class="hint" style="padding:0 18px 16px;margin:0" id="hist-empty">Đang tải…</p></div>
+    </section>
+  </div>
+
+  <section class="card" id="result" aria-live="polite"></section>
+</div>
+
+<footer class="wrap">Biên bản do AI viết từ transcript bạn cung cấp. Hãy đọc lại, đặc biệt các mục được đánh dấu vàng, trước khi dùng chính thức. Người ghi âm có trách nhiệm thông báo cho người tham dự.</footer>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/*CORE*/
+</script>
+<script>
+(() => {
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ls = { get(k){ try { return localStorage.getItem(k) || ""; } catch { return ""; } }, set(k,v){ try { v ? localStorage.setItem(k,v) : localStorage.removeItem(k); } catch {} } };
+
+const SAMPLE_VTT = /*SAMPLE*/"";
+const EXAMPLE = {
+  title: "Chốt hợp đồng An Phát", meeting_type: "ban_hang",
+  purpose: "Thống nhất các điều khoản hợp đồng với An Phát trước khi gửi bản cuối.",
+  chair: "Nguyễn Văn Hùng", attendees: ["Nguyễn Văn Hùng", "Trần Thị Lan", "Lê Minh", "Phạm Thu Hà"],
+  summary: [
+    { text: "An Phát phản hồi báo giá, cho rằng phí triển khai cao và đề nghị giảm giá nếu ký sớm.", timestamp: "00:13" },
+    { text: "Doanh số tháng 10 của nhóm đạt khoảng 92% kế hoạch, hợp đồng này giúp bù phần thiếu hụt.", timestamp: "04:12" },
+  ],
+  decisions: [
+    { text: "Giảm 8% cho An Phát nếu ký hợp đồng trước ngày 15/11.", timestamp: "17:40" },
+    { text: "Thanh toán chia 2 đợt: 60% khi ký, 40% sau nghiệm thu.", timestamp: "21:12" },
+  ],
+  action_items: [
+    { task: "Cập nhật báo giá theo mức giảm mới và gửi lại An Phát", owner: "Trần Thị Lan", deadline: "Thứ Sáu tuần này", timestamp: "23:05" },
+    { task: "Rà soát điều khoản bảo hành với bộ phận pháp chế", owner: "Lê Minh", deadline: "Thứ Ba tuần sau", timestamp: "31:48" },
+    { task: "Xin ý kiến lãnh đạo về cách tính phí triển khai", owner: "Nguyễn Văn Hùng", deadline: "Chưa có", timestamp: "38:41" },
+  ],
+  open_questions: [ { text: "Phí triển khai tính riêng hay gộp vào giá license; kế toán cần để xuất hóa đơn.", timestamp: "38:20" } ],
+  risks: [ { text: "Nếu tách phí triển khai, An Phát có thể đề nghị giảm giá thêm.", timestamp: "38:41" } ],
+  uncertain: [ { term: "anh Quang", reason: "Tên người bên pháp chế có thể bị nhận dạng sai (anh Quân?).", timestamp: "31:48" } ],
+};
+
+let sample = null, downloads = null, db = null, uid = null;
+let loadedFile = null;            // {name, segs}
+let current = null;               // {id?, minutes, segs, created, example?}
+let history = [];
+let ctl = null;
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3200); }
+const fmtDate = (iso) => new Date(iso).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" });
+
+// ---------- Kết quả ----------
+function mark(text, unc) {
+  let out = esc(text);
+  for (const u of unc) if (u.term) out = out.split(esc(u.term)).join(`<span class="unc" title="${esc(u.reason)}">${esc(u.term)}</span>`);
+  return out;
+}
+function pts(title, list, unc) {
+  if (!list.length) return "";
+  return `<h3>${title}</h3>` + list.map((p) => `<div class="item"><span>${mark(p.text, unc)}</span><button class="ts" data-ts="${esc(p.timestamp)}" title="Xem câu nói gốc">${esc(p.timestamp)}</button></div>`).join("");
+}
+function renderResult() {
+  const r = $("#result");
+  if (!current) { r.innerHTML = ""; return; }
+  const m = current.minutes, unc = m.uncertain;
+  const sub = current.example ? "Biên bản mẫu tạo từ cuộc họp mẫu. Tải transcript của bạn để tạo biên bản thật."
+    : `${TK.TYPES[m.meeting_type]} · ${fmtDate(current.created)}`;
+  r.innerHTML = `
+    <div class="res-bar">
+      <div>${current.example ? '<span class="badge">VÍ DỤ</span>' : ""}<h1>${esc(m.title)}</h1><small>${sub}</small></div>
+      <div class="acts">
+        <button class="btn" id="copy">Sao chép</button>
+        ${downloads ? '<button class="btn" id="dl-md">Markdown</button><button class="btn pri" id="dl-docx">Tải Word</button>' : ""}
+        ${current.id ? '<button class="btn" id="del" style="color:var(--stamp)">Xóa</button>' : ""}
+      </div>
+    </div>
+    <div class="cols">
+      <div class="mins sec">
+        <h3>Thông tin</h3>
+        <div class="meta"><div><b>Mục đích:</b> ${esc(m.purpose)}</div><div><b>Chủ trì:</b> ${esc(m.chair)}</div><div><b>Tham dự:</b> ${esc(m.attendees.join(", ") || "Chưa xác định")}</div></div>
+        ${pts("Quyết định", m.decisions, unc)}
+        ${m.action_items.length ? `<h3>Việc cần làm</h3><div class="tbl"><table><thead><tr><th>Việc</th><th>Phụ trách</th><th>Hạn</th><th></th></tr></thead><tbody>${m.action_items.map((a) => `<tr><td>${mark(a.task, unc)}</td><td>${esc(a.owner)}</td><td>${esc(a.deadline)}</td><td><button class="ts" data-ts="${esc(a.timestamp)}">${esc(a.timestamp)}</button></td></tr>`).join("")}</tbody></table></div>` : ""}
+        ${pts("Nội dung chính", m.summary, unc)}
+        ${pts("Vấn đề còn mở", m.open_questions, unc)}
+        ${pts("Rủi ro", m.risks, unc)}
+        ${unc.length ? "<h3>Cần kiểm tra lại</h3>" + unc.map((u) => `<div class="item"><span><span class="unc">${esc(u.term)}</span>: ${esc(u.reason)}</span><button class="ts" data-ts="${esc(u.timestamp)}">${esc(u.timestamp)}</button></div>`).join("") : ""}
+      </div>
+      <div class="tr sec" id="tr"><h3>Transcript</h3>${current.segs.length ? current.segs.map((s) => `<div class="line" data-s="${s.start}"><span class="t">${TK.fmtTs(s.start)}</span><span class="w">${esc(s.speaker)}:</span> ${esc(s.text)}</div>`).join("") : '<p class="hint">Transcript quá dài nên không được lưu cùng biên bản này.</p>'}</div>
+    </div>`;
+  r.querySelectorAll(".ts").forEach((b) => b.onclick = () => jump(b.dataset.ts));
+  $("#copy").onclick = async () => {
+    const md = TK.toMarkdown(m, new Date(current.created));
+    try { await navigator.clipboard.writeText(md); toast("Đã sao chép biên bản dạng Markdown."); }
+    catch { toast("Trình duyệt không cho sao chép. Hãy dùng nút tải Markdown."); }
+  };
+  if (downloads) {
+    $("#dl-md").onclick = () => save(`bien-ban-${slug(m.title)}.md`, new TextEncoder().encode(TK.toMarkdown(m, new Date(current.created))));
+    $("#dl-docx").onclick = () => save(`bien-ban-${slug(m.title)}.docx`, TK.toDocx(m, { org: $("#org").value.trim(), date: new Date(current.created) }));
+  }
+  const del = $("#del");
+  if (del) del.onclick = async () => {
+    if (del.dataset.armed !== "1") { del.dataset.armed = "1"; del.textContent = "Bấm lần nữa để xóa"; return; }
+    try { await db.collection(`data/users/${uid}`).doc(current.id).delete(); current = null; showIntro(); toast("Đã xóa biên bản."); }
+    catch { toast("Chưa xóa được. Thử lại sau."); }
+  };
+}
+function slug(s) { return s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50) || "cuoc-hop"; }
+async function save(filename, data) {
+  try { await downloads.save({ filename, data }); }
+  catch (e) {
+    if (e && e.code === "declined") return;
+    toast(e && e.code === "rate_limited" ? "Đang có một hộp thoại tải về khác, thử lại sau giây lát." : "Không tải được file ở chế độ xem này.");
+  }
+}
+function jump(ts) {
+  const target = TK.parseTs(ts), tr = $("#tr");
+  let best = null;
+  for (const l of tr.querySelectorAll(".line")) { l.classList.remove("hit"); if (Number(l.dataset.s) <= target + 1) best = l; }
+  if (best) { best.classList.add("hit"); tr.scrollTo({ top: best.offsetTop - tr.clientHeight / 2 + best.clientHeight / 2, behavior: "smooth" }); }
+}
+function showIntro() {
+  current = { example: true, minutes: TK.normalize(EXAMPLE), segs: TK.parseTranscript(SAMPLE_VTT, "mau.vtt"), created: new Date().toISOString() };
+  renderResult(); renderHistory();
+}
+function showState(html) { $("#result").innerHTML = `<div class="state">${html}</div>`; }
+
+// ---------- Đầu vào ----------
+function setFile(name, text) {
+  const segs = TK.parseTranscript(text, name);
+  if (!segs.length) { showErr("Không đọc được nội dung trong file này. Hỗ trợ .vtt, .srt, .txt hoặc JSON của Recall.ai."); return; }
+  loadedFile = { name, segs };
+  $("#loaded-txt").textContent = `${name} · ${segs.length} lượt nói`;
+  $("#loaded").hidden = false; $("#paste").disabled = true; $("#in-err").hidden = true;
+}
+function readFile(f) {
+  if (!f) return;
+  if (f.size > 2_000_000) { showErr("File lớn hơn 2 MB. Hãy chia transcript thành nhiều phần."); return; }
+  const r = new FileReader();
+  r.onload = () => setFile(f.name, String(r.result));
+  r.onerror = () => showErr("Không đọc được file này.");
+  r.readAsText(f, "utf-8");
+}
+function showErr(msg) { const e = $("#in-err"); e.textContent = msg; e.hidden = false; }
+$("#file").onchange = (e) => { readFile(e.target.files[0]); e.target.value = ""; };
+const drop = $("#drop");
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); readFile(e.dataTransfer.files[0]); };
+$("#clear").onclick = () => { loadedFile = null; $("#loaded").hidden = true; $("#paste").disabled = false; };
+$("#use-sample").onclick = () => { setFile("hop-an-phat.vtt", SAMPLE_VTT); $("#glossary").value ||= "An Phát, anh Quân"; };
+for (const id of ["glossary", "org"]) { $("#" + id).value = ls.get("tk_" + id); $("#" + id).onchange = (e) => ls.set("tk_" + id, e.target.value.trim()); }
+
+const ERR = {
+  rate_limited: "Bạn đã chạm giới hạn sử dụng Claude của tài khoản. Thử lại sau ít phút.",
+  prompt_too_large: "Transcript quá dài cho một lần xử lý. Hãy chia cuộc họp thành nhiều phần.",
+  refused: "Claude không xử lý được nội dung này.",
+  session_expired: "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại claude.ai rồi thử lại.",
+  invalid_json: "Kết quả trả về bị lỗi định dạng. Bấm Tạo biên bản để thử lại.",
+  empty_completion: "Claude không trả về nội dung. Thử lại với transcript ngắn hơn.",
+};
+$("#go").onclick = async () => {
+  $("#in-err").hidden = true;
+  const segs = loadedFile ? loadedFile.segs : TK.parseTranscript($("#paste").value, "dan.txt");
+  if (!segs.length) { showErr("Hãy chọn file transcript, dán nội dung, hoặc bấm Dùng cuộc họp mẫu."); return; }
+  if (!sample) { showErr("Trang này cần quyền dùng Claude. Hãy mở trang trên claude.ai khi đã đăng nhập."); return; }
+  const prompt = TK.buildPrompt(segs, { glossary: $("#glossary").value.trim(), context: "" });
+  if (new Blob([prompt]).size > 250_000) { showErr(ERR.prompt_too_large); return; }
+  const go = $("#go");
+  go.disabled = true; go.textContent = "Đang viết biên bản…";
+  ctl = new AbortController();
+  showState(`<div class="spin"></div><h2>Đang viết biên bản</h2><p>${segs.length} lượt nói. Thường mất 30–90 giây.</p><p class="prog" id="prog">Đang chờ Claude…</p><p><button class="btn" id="stop">Dừng</button></p>`);
+  $("#stop").onclick = () => ctl && ctl.abort();
+  try {
+    const raw = await sample.json(prompt, {
+      modelTier: "complex", signal: ctl.signal,
+      onText: ({ text }) => { const p = $("#prog"); if (p) p.textContent = `Đã viết ${text.length.toLocaleString("vi-VN")} ký tự…`; },
+    });
+    const minutes = TK.normalize(raw);
+    current = { minutes, segs, created: new Date().toISOString() };
+    await persist();
+    renderResult(); renderHistory();
+    $("#result").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) {
+    const code = e && e.code;
+    if (code === "cancelled") { showIntro(); }
+    else if (code === "not_granted" || code === "sampling_disabled" || code === "not_declared" || code === "capability_disabled") {
+      showIntro(); showErr("Bạn chưa cho phép trang này dùng Claude. Mở menu Quyền (Permissions) của trang để bật, rồi thử lại.");
+    } else { showIntro(); showErr(ERR[code] || (e && e.message && !code ? e.message : "Có lỗi tạm thời khi kết nối Claude. Bấm Tạo biên bản để thử lại.")); }
+  } finally { go.disabled = false; go.textContent = "Tạo biên bản"; ctl = null; }
+};
+
+// ---------- Lịch sử (riêng tư cho từng người) ----------
+async function persist() {
+  if (!db || !uid) return;
+  const ref = db.collection(`data/users/${uid}`).doc();
+  let doc = { title: current.minutes.title, created: current.created, minutes: current.minutes, segs: current.segs };
+  if (new Blob([JSON.stringify(doc)]).size > 240_000) doc = { ...doc, segs: [] };
+  try { await ref.set(doc); current.id = ref.id; }
+  catch { toast("Biên bản chưa được lưu vào lịch sử. Hãy tải về để giữ lại."); }
+}
+function renderHistory() {
+  const box = $("#hist");
+  if (!db || !uid) { box.innerHTML = `<p class="hint" style="padding:0 18px 16px;margin:0">Đăng nhập claude.ai để lưu biên bản. Ở chế độ này hãy tải biên bản về sau khi tạo.</p>`; return; }
+  if (!history.length) { box.innerHTML = `<p class="hint" style="padding:0 18px 16px;margin:0">Chưa có biên bản nào. Biên bản bạn tạo sẽ được lưu ở đây, chỉ bạn xem được.</p>`; return; }
+  box.innerHTML = history.map((h) => `<button class="hi ${current && current.id === h.id ? "on" : ""}" data-id="${esc(h.id)}"><div><b>${esc(h.title)}</b><span>${fmtDate(h.created)} · ${h.minutes.action_items.length} việc</span></div></button>`).join("");
+  box.querySelectorAll(".hi").forEach((b) => b.onclick = () => {
+    const h = history.find((x) => x.id === b.dataset.id);
+    if (!h) return;
+    current = { id: h.id, minutes: TK.normalize(h.minutes), segs: Array.isArray(h.segs) ? h.segs : [], created: h.created };
+    renderResult(); renderHistory();
+  });
+}
+
+// ---------- Khởi động ----------
+showIntro();
+(async () => {
+  const use = (n) => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
+  [sample, downloads] = await Promise.all([use("sample"), use("downloads")]);
+  if (!sample) { $("#cap-note").textContent = "Mở trang này trên claude.ai (đã đăng nhập) để tạo biên bản."; $("#cap-note").hidden = false; }
+  renderResult();
+  const [dbx, user] = await Promise.all([use("db"), use("user")]);
+  uid = user ? await user.id().catch(() => null) : null;
+  db = dbx;
+  if (!db || !uid) { renderHistory(); return; }
+  const timer = setTimeout(() => { if (!history.length) $("#hist").innerHTML = `<p class="hint" style="padding:0 18px 16px;margin:0">Chưa tải được lịch sử.</p>`; }, 10000);
+  db.collection(`data/users/${uid}`).orderBy("created", "desc").limit(50).onSnapshot((snap) => {
+    clearTimeout(timer);
+    history = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((h) => h.minutes && h.title);
+    if (current && current.id && !history.some((h) => h.id === current.id) && !snap.metadata.hasPendingWrites) { showIntro(); return; }
+    renderHistory();
+  }, () => { clearTimeout(timer); $("#hist").innerHTML = `<p class="hint" style="padding:0 18px 16px;margin:0">Chưa tải được lịch sử. Biên bản mới vẫn tạo được; hãy tải về để giữ lại.</p>`; });
+})();
+})();
+</script>
