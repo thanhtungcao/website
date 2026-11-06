@@ -73,3 +73,43 @@ def test_bot_captures_meeting_audio(tmp_path, monkeypatch):
     assert any(c["has440"] for c in chunks), "không thu được âm thanh WebRTC"
     assert any(c["has880"] for c in chunks), "không thu được âm thanh WebAudio"
     assert store.get(m["id"])["status"] == "finishing"
+
+
+def test_parse_teams_invite_from_user():
+    from app.invite import parse
+    text = """Microsoft Teams meeting
+Join: https://teams.microsoft.com/meet/46303252758087?p=qLkgJjIICYx4MswfyL
+Meeting ID: 463 032 527 580 87
+Passcode: 723uD9GF"""
+    f = parse(text)
+    assert f["platform"] == "teams" and f["url"] == "https://teams.microsoft.com/meet/46303252758087?p=qLkgJjIICYx4MswfyL"
+    assert f["meeting_id"] == "463 032 527 580 87" and f["passcode"] == "723uD9GF"
+    only_id = parse("Microsoft Teams meeting\nMeeting ID: 463 032 527 580 87\nPasscode: 723uD9GF")
+    assert only_id["url"] == "https://teams.microsoft.com/meet/46303252758087?p=723uD9GF"
+    z = parse("Join Zoom Meeting\nMeeting ID: 812 3456 7890\nPasscode: 123456")
+    assert z["url"] == "https://app.zoom.us/wc/join/81234567890" and z["passcode"] == "123456"
+    assert parse("meet.google.com/abc-defg-hij")["url"] == "https://meet.google.com/abc-defg-hij"
+    assert parse("https://evil.com/?u=meet.google.com") is None and parse("xin chào") is None
+
+
+def test_join_accepts_full_invite_and_explains_when_bot_off(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import asr, main
+    monkeypatch.setattr(config, "DB_PATH", str(tmp_path / "t.db"))
+    monkeypatch.setattr(config, "SECURE_COOKIES", False)
+    monkeypatch.setattr(config, "RECALL_API_KEY", "")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
+    c = TestClient(main.app)
+    invite_text = "Microsoft Teams meeting\nJoin: https://teams.microsoft.com/meet/46303252758087?p=qLkgJjIICYx4MswfyL\nPasscode: 723uD9GF"
+    assert c.post("/api/invite/parse", json={"text": invite_text}).json()["platform_name"] == "Microsoft Teams"
+    monkeypatch.setattr(config, "LOCAL_BOT", False)
+    cfg = c.get("/api/config").json()
+    assert cfg["local_bot_enabled"] is False and "chay-tren-may.bat" in cfg["local_bot_reason"]
+    assert "chay-tren-may.bat" in c.post("/api/meetings/join", json={"meeting_url": invite_text}).json()["detail"]
+    monkeypatch.setattr(config, "LOCAL_BOT", True)
+    monkeypatch.setattr(asr, "available", lambda: True)
+    started = {}
+    monkeypatch.setattr(meetbot, "start", lambda mid, url, platform, hint, on_done, passcode="": started.update(url=url, platform=platform, passcode=passcode))
+    r = c.post("/api/meetings/join", json={"meeting_url": invite_text})
+    assert r.status_code == 200 and r.json()["platform"] == "Microsoft Teams"
+    assert started == {"url": "https://teams.microsoft.com/meet/46303252758087?p=qLkgJjIICYx4MswfyL", "platform": "teams", "passcode": "723uD9GF"}

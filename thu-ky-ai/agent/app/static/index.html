@@ -85,6 +85,16 @@ dialog label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
 dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
 .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .btn.danger{color:var(--stamp)}
+.join-box{background:var(--blue-soft);border-bottom:1px solid var(--line)}
+.join-box h2{color:var(--blue)}
+.join-box textarea{width:100%;min-height:76px;resize:vertical;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--sheet);font:400 13.5px/1.5 var(--f)}
+.join-box textarea:focus{outline:2px solid var(--blue);outline-offset:0;border-color:var(--blue)}
+.join-box input[type=text]{background:var(--sheet)}
+.detect{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;min-height:0}
+.detect .ok{background:var(--sheet);border:1px solid color-mix(in srgb,var(--good) 40%,transparent);color:var(--good);border-radius:999px;padding:3px 9px;font-weight:600}
+.detect .kv{background:var(--sheet);border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--muted)}
+.detect .kv b{color:var(--ink);font-weight:600}
+.off{font-size:13px;color:var(--warn);background:var(--sheet);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:8px;padding:8px 10px;margin:0}
 .chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;cursor:pointer}
 .chk input{margin-top:4px}
 .chk small{display:block;color:var(--muted);font-size:12px}
@@ -107,12 +117,15 @@ dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-ra
 <div class="app">
   <aside>
     <a class="brand" href="/" style="text-decoration:none;color:inherit"><i>TK</i>Thư Ký AI</a>
-    <form class="box" id="join" hidden>
+    <form class="box join-box" id="join">
       <h2>Mời Thư Ký AI vào cuộc họp</h2>
-      <input type="url" id="url" placeholder="Dán link Zoom, Google Meet hoặc Teams" required>
+      <label for="url" class="hint" style="margin:0">Dán link họp hoặc cả lời mời họp (Teams, Zoom, Google Meet)</label>
+      <textarea id="url" placeholder="Ví dụ:&#10;Join: https://teams.microsoft.com/meet/4630...?p=...&#10;Meeting ID: 463 032 527 580 87&#10;Passcode: 723uD9GF" required></textarea>
+      <div class="detect" id="join-detect" aria-live="polite"></div>
       <input type="text" id="join-hint" placeholder="Tên riêng cần nghe đúng (không bắt buộc)">
       <button class="btn pri" type="submit" id="join-btn">Mời vào họp và tự ghi</button>
-      <p class="hint" id="join-note" hidden>Một cửa sổ trình duyệt sẽ mở và vào họp với tên "Thư Ký AI". Hãy cho bot vào phòng (admit). Nếu bot không tự bấm được nút tham gia, bạn bấm giúp trong cửa sổ đó.</p>
+      <p class="off" id="join-off" hidden></p>
+      <p class="hint" id="join-note" hidden>Một cửa sổ trình duyệt sẽ mở và vào họp với tên "Thư Ký AI". Người chủ trì cần cho bot vào phòng (Admit). Nếu bot không tự bấm được nút tham gia, bạn bấm giúp trong cửa sổ đó.</p>
       <p class="err" id="join-err" hidden></p>
     </form>
     <div class="box" id="live-box" hidden>
@@ -157,13 +170,17 @@ const ls = {get(k){try{return localStorage.getItem(k)||""}catch{return ""}}, set
 function keyHeader(){ const k = ls.get("tk_key"); return k ? {"X-Anthropic-Key": k} : {}; }
 async function loadConfig(){
   try { cfg = await api("/api/config"); } catch { return; }
-  $("#join").hidden = !(cfg.bot_enabled || cfg.local_bot_enabled);
+  const botOk = cfg.bot_enabled || cfg.local_bot_enabled;
+  $("#join-btn").disabled = !botOk;
+  $("#join-off").hidden = botOk;
+  $("#join-off").textContent = botOk ? "" : (cfg.local_bot_reason || "Bản cài đặt này chưa bật bot vào họp.");
   $("#join-note").hidden = !cfg.local_bot_enabled || cfg.bot_enabled;
   $("#live-box").hidden = !cfg.live_enabled;
   const own = !!ls.get("tk_key");
   $("#quota").innerHTML = own ? "Đang dùng <b>khóa riêng</b>, không giới hạn"
     : cfg.server_key ? (cfg.free_daily_limit > 0 ? `Hôm nay: <b>${cfg.used_today}/${cfg.free_daily_limit}</b> biên bản miễn phí` : "Miễn phí, không giới hạn")
     : "Cần nhập khóa Claude API trong Cài đặt";
+  $("#quota").innerHTML += ` · <span title="Phiên bản">v${esc(cfg.version || "")}</span>`;
 }
 $("#open-settings").onclick = () => { $("#s-key").value = ls.get("tk_key"); $("#s-org").value = ls.get("tk_org"); $("#settings").showModal(); };
 $("#s-save").onclick = () => { ls.set("tk_key", $("#s-key").value.trim()); ls.set("tk_org", $("#s-org").value.trim()); $("#settings").close(); loadConfig(); };
@@ -271,10 +288,25 @@ $("#join").onsubmit = async (e) => {
   e.preventDefault();
   const btn = $("#join-btn"), err = $("#join-err");
   btn.disabled = true; err.hidden = true;
-  try { const m = await api("/api/meetings/join", {method:"POST", headers:{"Content-Type":"application/json", ...keyHeader()}, body: JSON.stringify({meeting_url: $("#url").value.trim(), glossary: $("#join-hint").value.trim()})}); $("#url").value = ""; loadConfig(); open(m.id); }
+  try { const m = await api("/api/meetings/join", {method:"POST", headers:{"Content-Type":"application/json", ...keyHeader()}, body: JSON.stringify({meeting_url: $("#url").value.trim(), glossary: $("#join-hint").value.trim()})}); $("#url").value = ""; $("#join-detect").innerHTML = ""; loadConfig(); open(m.id); }
   catch (x) { err.textContent = x.message; err.hidden = false; }
-  finally { btn.disabled = false; }
+  finally { btn.disabled = !(cfg.bot_enabled || cfg.local_bot_enabled); }
 };
+// Nhận diện lời mời ngay khi dán
+let detectTimer = null;
+$("#url").addEventListener("input", () => {
+  clearTimeout(detectTimer);
+  const text = $("#url").value.trim(), box = $("#join-detect");
+  $("#join-err").hidden = true;
+  if (!text) { box.innerHTML = ""; return; }
+  detectTimer = setTimeout(async () => {
+    try {
+      const f = await api("/api/invite/parse", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({text})});
+      box.innerHTML = `<span class="ok">✓ ${esc(f.platform_name)}</span>` + (f.meeting_id ? `<span class="kv">ID <b>${esc(f.meeting_id)}</b></span>` : "") + (f.passcode ? `<span class="kv">Passcode <b>${esc(f.passcode)}</b></span>` : "");
+    } catch (e) { box.innerHTML = `<span class="kv">${esc(e.message)}</span>`; }
+  }, 300);
+});
+$("#url").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("#join").requestSubmit(); });
 
 async function upload(file) {
   const err = $("#up-err"); err.hidden = true;
@@ -357,7 +389,7 @@ $("#live-start").onclick = async () => {
     if (wantMic) streams.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
   } catch (e) {
     cleanup();
-    err.textContent = e.name === "NotAllowedError" ? "Bạn đã từ chối quyền ghi âm hoặc chia sẻ. Hãy cho phép rồi thử lại." : (e.message || "Không bật được ghi âm.");
+    err.textContent = e.name === "NotAllowedError" ? (wantSys && !streams.display ? "Bạn đã đóng hộp thoại chia sẻ. Bấm Bắt đầu ghi lại, chọn tab hoặc màn hình đang họp, tích ô Chia sẻ âm thanh rồi bấm Chia sẻ. Hoặc dán link họp ở ô phía trên để Thư Ký AI tự vào họp." : "Trình duyệt chưa cho phép dùng micro. Bấm biểu tượng ổ khóa trên thanh địa chỉ, cho phép Micro rồi thử lại.") : (e.message || "Không bật được ghi âm.");
     err.hidden = false; return;
   }
   let m;

@@ -121,14 +121,8 @@ CAPTURE_JS = r"""
 # ---------- Nhận diện nền tảng và link ----------
 
 def detect(url: str) -> str:
-    host = (urlparse(url).hostname or "").lower()
-    if host == "meet.google.com":
-        return "meet"
-    if host == "zoom.us" or host.endswith(".zoom.us"):
-        return "zoom"
-    if host in {"teams.microsoft.com", "teams.live.com"} or host.endswith(".teams.microsoft.com"):
-        return "teams"
-    return ""
+    from .invite import platform_of
+    return platform_of(url)
 
 
 PLATFORM_NAMES = {"meet": "Google Meet", "zoom": "Zoom", "teams": "Microsoft Teams", "generic": "Trang họp"}
@@ -187,7 +181,7 @@ async def _any_visible(page, pattern: re.Pattern, role: str | None = "button") -
     return False
 
 
-async def _join_meet(page, name: str) -> None:
+async def _join_meet(page, name: str, passcode: str = "") -> None:
     await _click(page, _rx(r"^got it$", r"^dismiss$"), timeout=2000)
     await _fill_name(page, name, ['input[aria-label="Your name"]', 'input[placeholder*="name" i]', 'input[type="text"]'])
     await _click(page, _rx(r"turn off microphone"), timeout=2000)
@@ -195,16 +189,21 @@ async def _join_meet(page, name: str) -> None:
     await _click(page, _rx(r"^ask to join$", r"^join now$", r"^join$", r"^switch here$"), timeout=8000)
 
 
-async def _join_teams(page, name: str) -> None:
+async def _join_teams(page, name: str, passcode: str = "") -> None:
     await _click(page, _rx(r"continue on this browser", r"join on the web instead", r"use the web app instead"), timeout=8000)
     await page.wait_for_timeout(3000)
+    if passcode and await _fill_name(page, passcode, ['input[placeholder*="passcode" i]', 'input[aria-label*="passcode" i]']):
+        await _click(page, _rx(r"^join meeting$", r"^join$", r"^continue$"), timeout=3000)
+        await page.wait_for_timeout(3000)
     await _fill_name(page, name, ['input[data-tid="prejoin-display-name-input"]', 'input[placeholder*="name" i]'])
     await _click(page, _rx(r"^camera$"), role="switch", timeout=1500)
     await _click(page, _rx(r"^join now$", r"^join$"), timeout=8000)
 
 
-async def _join_zoom(page, name: str) -> None:
+async def _join_zoom(page, name: str, passcode: str = "") -> None:
     await _click(page, _rx(r"^i agree$", r"^accept cookies$", r"^accept all cookies$"), timeout=2000)
+    if passcode:
+        await _fill_name(page, passcode, ["#input-for-pwd", 'input[placeholder*="passcode" i]', 'input[type="password"]'])
     await _fill_name(page, name, ["#input-for-name", 'input[placeholder*="name" i]'])
     await _click(page, _rx(r"^join$"), timeout=8000)
 
@@ -229,8 +228,9 @@ ENDED = _rx(r"you've left the (meeting|call)", r"you left the meeting", r"the ca
 # ---------- Bot ----------
 
 class MeetBot:
-    def __init__(self, mid: str, url: str, platform: str, hint: str, on_done: Callable[[str, bool], None]):
+    def __init__(self, mid: str, url: str, platform: str, hint: str, on_done: Callable[[str, bool], None], passcode: str = ""):
         self.mid, self.url, self.platform, self.hint, self.on_done = mid, url, platform, hint, on_done
+        self.passcode = passcode
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self._thread, name=f"tk-bot-{mid}", daemon=True)
 
@@ -289,7 +289,7 @@ class MeetBot:
                 joiner = JOINERS.get(self.platform)
                 if joiner:
                     try:
-                        await joiner(page, config.BOT_NAME)
+                        await joiner(page, config.BOT_NAME, self.passcode)
                     except Exception:
                         log.warning("Không tự bấm vào họp được, chờ người dùng thao tác", exc_info=True)
 
@@ -372,22 +372,28 @@ def _silence_wav() -> str:
     return path
 
 
-def available() -> bool:
+def unavailable_reason() -> str:
+    """Chuỗi rỗng nếu bot dùng được; nếu không thì lý do và cách bật."""
     if not config.LOCAL_BOT:
-        return False
+        return ("Bot tự vào họp chỉ chạy khi mở Thư Ký AI trên máy của bạn bằng chay-tren-may.bat "
+                "(hoặc đặt LOCAL_BOT=1).")
     try:
         import playwright  # noqa: F401
-        return True
     except ImportError:
-        return False
+        return "Thiếu thư viện bot. Chạy lại chay-tren-may.bat, hoặc: pip install -r requirements-bot.txt"
+    return ""
+
+
+def available() -> bool:
+    return not unavailable_reason()
 
 
 def active_count() -> int:
     return len(_bots)
 
 
-def start(mid: str, url: str, platform: str, hint: str, on_done: Callable[[str, bool], None]) -> None:
-    bot = MeetBot(mid, url, platform, hint, on_done)
+def start(mid: str, url: str, platform: str, hint: str, on_done: Callable[[str, bool], None], passcode: str = "") -> None:
+    bot = MeetBot(mid, url, platform, hint, on_done, passcode)
     _bots[mid] = bot
     bot.start()
 

@@ -15,7 +15,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, Header, HTTPException,
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel
 
-from . import asr, config, live, meetbot, recall, store, webhook
+from . import asr, config, invite, live, meetbot, recall, store, webhook
 from .minutes import Minutes, MinutesError, generate_minutes
 from .render import to_docx, to_markdown
 from .transcript import Segment, parse_recall_json, parse_transcript
@@ -154,7 +154,9 @@ def get_config(request: Request):
         "retention_days": config.RETENTION_DAYS,
         "max_upload_mb": round(config.MAX_UPLOAD_BYTES / 1_000_000, 1),
         "live_enabled": asr.available(),
+        "version": config.VERSION,
         "local_bot_enabled": meetbot.available() and asr.available(),
+        "local_bot_reason": meetbot.unavailable_reason() or ("" if asr.available() else "Thiếu bộ chép lời. Chạy lại chay-tren-may.bat, hoặc: pip install -r requirements-asr.txt"),
     }
 
 
@@ -186,27 +188,42 @@ BOT_CONTEXT = ("Transcript được chép tự động từ âm thanh cuộc h�
                "nói khác nhau; hãy suy ra tên người nói từ ngữ cảnh (lời chào, gọi tên) khi có thể.")
 
 
+class InviteText(BaseModel):
+    text: str
+
+
+@app.post("/api/invite/parse")
+def parse_invite(req: InviteText):
+    found = invite.parse(req.text[:5000])
+    if not found:
+        raise HTTPException(400, "Chưa nhận ra link họp. Dán link Teams, Zoom, Google Meet hoặc cả đoạn lời mời họp.")
+    return found
+
+
 @app.post("/api/meetings/join")
 def join(req: JoinRequest, request: Request, x_anthropic_key: str | None = Header(None)):
-    url = req.meeting_url.strip()
+    found = invite.parse(req.meeting_url[:5000])
+    if not found:
+        raise HTTPException(400, "Chưa nhận ra link họp. Dán link Teams, Zoom, Google Meet hoặc cả đoạn lời mời họp.")
+    url = found["url"]
     if not config.RECALL_API_KEY:
-        return _join_local(url, req.glossary.strip()[:500], request, (x_anthropic_key or "").strip() or None)
+        return _join_local(url, req.glossary.strip()[:500], request, (x_anthropic_key or "").strip() or None, found["passcode"])
     if not recall.detect_platform(url):
         raise HTTPException(400, "Link họp không hợp lệ. Hỗ trợ Zoom, Google Meet và Microsoft Teams.")
     charged = take_quota(request, None)
     try:
-        bot = recall.create_bot(req.meeting_url, req.join_at)
+        bot = recall.create_bot(url, req.join_at)
     except recall.RecallError as e:
         store.refund(charged or [])
         raise HTTPException(400, str(e))
-    return store.create("bot", owner(request), status="joining", platform=recall.detect_platform(req.meeting_url),
-                        meeting_url=req.meeting_url, bot_id=bot["id"])
+    return store.create("bot", owner(request), status="joining", platform=recall.detect_platform(url),
+                        meeting_url=url, bot_id=bot["id"])
 
 
-def _join_local(url: str, hint: str, request: Request, key: str | None) -> dict:
+def _join_local(url: str, hint: str, request: Request, key: str | None, passcode: str = "") -> dict:
     """Bot chạy trên máy: mở Edge/Chrome, vào link họp, thu âm thanh, chép lời bằng faster-whisper."""
     if not meetbot.available():
-        raise HTTPException(400, "Bản cài đặt này chưa bật bot vào họp. Chạy trên máy bằng chay-tren-may.bat (LOCAL_BOT=1).")
+        raise HTTPException(400, meetbot.unavailable_reason())
     if not asr.available():
         raise HTTPException(400, "Bot cần bộ chép lời faster-whisper. Cài bằng: pip install -r requirements-asr.txt")
     platform = meetbot.detect(url)
@@ -225,7 +242,7 @@ def _join_local(url: str, hint: str, request: Request, key: str | None) -> dict:
         elif charged:
             store.refund(charged)
 
-    meetbot.start(m["id"], url, platform, hint, on_done)
+    meetbot.start(m["id"], url, platform, hint, on_done, passcode)
     return store.get(m["id"])
 
 

@@ -1,5 +1,7 @@
 import os
 
+VERSION = "2026.11.06-4"
+
 
 def _int(name: str, default: int) -> int:
     try:
