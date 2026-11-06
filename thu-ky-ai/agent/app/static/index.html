@@ -69,7 +69,7 @@ th{font-size:12px;color:var(--muted);font-weight:600}
 .line .t{font:400 11.5px var(--mono);color:var(--muted);margin-right:6px}
 .line .w{font-weight:600}
 .line.hit{background:var(--blue-soft)}
-.wait{padding:40px 24px;color:var(--muted)}
+.waiting{padding:40px 24px;color:var(--muted)}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:8px}
 @keyframes s{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.spin{animation:none}}
@@ -85,6 +85,21 @@ dialog label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}
 dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
 .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .btn.danger{color:var(--stamp)}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;cursor:pointer}
+.chk input{margin-top:4px}
+.chk small{display:block;color:var(--muted);font-size:12px}
+.btn.rec{background:var(--stamp);border-color:var(--stamp);color:#fff}
+.live{padding:22px 24px;display:grid;gap:18px}
+.live-top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.clock{font:500 30px/1 var(--mono);font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--stamp);margin-right:8px;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.meters{display:grid;gap:8px;max-width:420px}
+.meter{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+.meter .b{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.meter .b i{display:block;height:100%;width:0;background:var(--good);transition:width .08s}
+.note{font-size:13.5px;color:var(--muted);background:var(--sheet);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.live-tr{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:12px 16px;max-height:52vh;overflow:auto}
 @media (max-width:900px){.app{grid-template-columns:1fr;height:auto}aside{border-right:0}.list{max-height:280px}.cols{grid-template-columns:1fr}.tr{border-left:0;border-top:1px solid var(--line)}}
 </style>
 </head>
@@ -92,6 +107,14 @@ dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-ra
 <div class="app">
   <aside>
     <a class="brand" href="/" style="text-decoration:none;color:inherit"><i>TK</i>Thư Ký AI</a>
+    <div class="box" id="live-box" hidden>
+      <h2>Ghi cuộc họp trực tiếp</h2>
+      <label class="chk"><input type="checkbox" id="src-system" checked><span>Âm thanh từ loa<small>Chọn tab hoặc màn hình đang họp và bật chia sẻ âm thanh</small></span></label>
+      <label class="chk"><input type="checkbox" id="src-mic" checked><span>Micro của tôi<small>Nên đeo tai nghe để micro không thu lại tiếng loa</small></span></label>
+      <input type="text" id="live-hint" placeholder="Tên riêng cần nghe đúng (không bắt buộc)">
+      <button class="btn rec" type="button" id="live-start">● Bắt đầu ghi</button>
+      <p class="err" id="live-err" hidden></p>
+    </div>
     <form class="box" id="join" hidden>
       <h2>Mời bot vào cuộc họp</h2>
       <input type="url" id="url" placeholder="Dán link Zoom, Google Meet hoặc Teams" required>
@@ -126,13 +149,14 @@ dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-ra
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const STATUS = {ready:["ready","Sẵn sàng"], error:["error","Lỗi"], processing:["wait","Đang viết biên bản"], joining:["wait","Bot đang vào họp"], recording:["wait","Đang ghi"]};
+const STATUS = {ready:["ready","Sẵn sàng"], error:["error","Lỗi"], processing:["wait","Đang viết biên bản"], joining:["wait","Bot đang vào họp"], recording:["wait","Đang ghi"], finishing:["wait","Đang chép nốt lời"]};
 let current = null, timer = null, cfg = {};
 const ls = {get(k){try{return localStorage.getItem(k)||""}catch{return ""}}, set(k,v){try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch{}}};
 function keyHeader(){ const k = ls.get("tk_key"); return k ? {"X-Anthropic-Key": k} : {}; }
 async function loadConfig(){
   try { cfg = await api("/api/config"); } catch { return; }
   $("#join").hidden = !cfg.bot_enabled;
+  $("#live-box").hidden = !cfg.live_enabled;
   const own = !!ls.get("tk_key");
   $("#quota").innerHTML = own ? "Đang dùng <b>khóa riêng</b>, không giới hạn"
     : cfg.server_key ? (cfg.free_daily_limit > 0 ? `Hôm nay: <b>${cfg.used_today}/${cfg.free_daily_limit}</b> biên bản miễn phí` : "Miễn phí, không giới hạn")
@@ -189,8 +213,9 @@ function render(m) {
   if (m.minutes) actions = `<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/api/meetings/${m.id}/minutes.md" target="_blank">Markdown</a><a class="btn pri" href="/api/meetings/${m.id}/minutes.docx?org=${encodeURIComponent(ls.get("tk_org"))}">Xuất Word</a><button class="btn danger" id="del">Xóa</button></div>`;
   else actions = `<button class="btn danger" id="del">Xóa</button>`;
   let body;
-  if (m.status === "error") body = `<div class="wait"><p class="err">${esc(m.error)}</p></div>`;
-  else if (!m.minutes) body = `<div class="wait"><span class="spin"></span>${STATUS[m.status]?.[1] || "Đang xử lý"}… Trang tự cập nhật.</div>`;
+  if (m.status === "error") body = `<div class="waiting"><p class="err">${esc(m.error)}</p></div>`;
+  else if (!m.minutes && m.source === "live" && m.status === "recording") body = `<div class="waiting">Buổi ghi này bị gián đoạn (trang đã đóng khi đang ghi). <button class="btn" id="resume-stop">Tạo biên bản từ phần đã ghi</button></div>`;
+  else if (!m.minutes) body = `<div class="waiting"><span class="spin"></span>${STATUS[m.status]?.[1] || "Đang xử lý"}${m.pending_chunks ? ` (còn ${m.pending_chunks} đoạn âm thanh)` : ""}… Trang tự cập nhật.</div>`;
   else {
     const x = m.minutes, unc = x.uncertain || [];
     body = `<div class="cols"><div class="minutes sec">
@@ -206,6 +231,8 @@ function render(m) {
   }
   $("#main").innerHTML = `<div class="bar"><h1>${esc(title)}<small>${sub}</small></h1>${actions}</div>${body}`;
   document.querySelectorAll(".ts").forEach((b) => b.onclick = () => jump(b.dataset.ts));
+  const rs = $("#resume-stop");
+  if (rs) rs.onclick = async () => { try { await api(`/api/live/${m.id}/stop`, {method:"POST", headers: keyHeader()}); open(m.id); } catch (e) { alertMain(e.message); } };
   const del = $("#del");
   if (del) del.onclick = async () => {
     if (del.dataset.armed !== "1") { del.dataset.armed = "1"; del.textContent = "Bấm lần nữa để xóa"; return; }
@@ -215,12 +242,13 @@ function render(m) {
 }
 
 async function open(id) {
+  if (rec && rec.mid === id) { renderLive(); return; }
   current = id; clearTimeout(timer);
   let m;
   try {
     m = await api(`/api/meetings/${id}`);
     if (!m.minutes && m.status !== "error" && m.source === "bot") m = await api(`/api/meetings/${id}/refresh`, {method:"POST"});
-  } catch (e) { $("#main").innerHTML = `<div class="wait"><p class="err">${esc(e.message)}</p></div>`; return; }
+  } catch (e) { $("#main").innerHTML = `<div class="waiting"><p class="err">${esc(e.message)}</p></div>`; return; }
   render(m); loadList(); if (m.status === "ready" || m.status === "error") loadConfig();
   if (!m.minutes && m.status !== "error") timer = setTimeout(() => open(id), m.source === "bot" ? 10000 : 3000);
 }
@@ -245,6 +273,144 @@ const drop = $("#drop");
 drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
 drop.ondragleave = () => drop.classList.remove("over");
 drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); e.dataTransfer.files[0] && upload(e.dataTransfer.files[0]); };
+
+// ---------- Ghi trực tiếp ----------
+const CHUNK_MS = 20000;
+let rec = null;
+function alertMain(msg) { const w = document.createElement("p"); w.className = "err"; w.style.padding = "0 24px"; w.textContent = msg; $("#main").prepend(w); }
+function pickMime() {
+  for (const t of ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"]) if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+  return "";
+}
+async function sendChunk(blob, offset, source, ext) {
+  const job = (async () => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const fd = new FormData(); fd.append("file", blob, `chunk.${ext}`); fd.append("offset", offset.toFixed(2)); fd.append("source", source);
+        const r = await fetch(`/api/live/${rec.mid}/chunk`, {method: "POST", body: fd});
+        if (r.ok || r.status === 409) return;
+      } catch {}
+      await new Promise((ok) => setTimeout(ok, 1500 * (attempt + 1)));
+    }
+    rec.lost++;
+  })();
+  rec.uploads.add(job); job.finally(() => rec && rec.uploads.delete(job));
+}
+function startLoop(stream, source) {
+  const mime = pickMime(), ext = mime.includes("mp4") ? "mp4" : mime.includes("ogg") ? "ogg" : "webm";
+  const st = { active: true, r: null, timer: null, done: null };
+  const cycle = () => {
+    const parts = [], offset = (performance.now() - rec.t0) / 1000;
+    const r = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 48000 } : undefined);
+    st.r = r;
+    r.ondataavailable = (e) => { if (e.data.size) parts.push(e.data); };
+    r.onstop = () => {
+      const blob = new Blob(parts, { type: r.mimeType || mime });
+      if (blob.size > 1500) sendChunk(blob, offset, source, ext);
+      if (st.active) cycle(); else if (st.done) st.done();
+    };
+    r.start();
+    st.timer = setTimeout(() => r.state !== "inactive" && r.stop(), CHUNK_MS);
+  };
+  cycle();
+  return st;
+}
+function stopLoop(st) {
+  return new Promise((ok) => {
+    st.active = false; clearTimeout(st.timer);
+    if (st.r && st.r.state !== "inactive") { st.done = ok; st.r.stop(); } else ok();
+  });
+}
+function meter(ctx, stream, id) {
+  const an = ctx.createAnalyser(); an.fftSize = 512;
+  ctx.createMediaStreamSource(stream).connect(an);
+  const buf = new Uint8Array(an.fftSize);
+  return () => { an.getByteTimeDomainData(buf); let peak = 0; for (const v of buf) peak = Math.max(peak, Math.abs(v - 128)); const el = document.getElementById(id); if (el) el.style.width = Math.min(100, peak * 1.6) + "%"; };
+}
+$("#live-start").onclick = async () => {
+  const err = $("#live-err"); err.hidden = true;
+  const wantSys = $("#src-system").checked, wantMic = $("#src-mic").checked;
+  if (!wantSys && !wantMic) { err.textContent = "Chọn ít nhất một nguồn âm thanh."; err.hidden = false; return; }
+  if (!window.MediaRecorder || !navigator.mediaDevices) { err.textContent = "Trình duyệt này không hỗ trợ ghi âm. Hãy dùng Chrome hoặc Edge bản mới."; err.hidden = false; return; }
+  const streams = {}, cleanup = () => Object.values(streams).forEach((s) => s.getTracks().forEach((t) => t.stop()));
+  try {
+    if (wantSys) {
+      const disp = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, systemAudio: "include", selfBrowserSurface: "exclude" });
+      streams.display = disp;
+      if (!disp.getAudioTracks().length) { cleanup(); throw new Error("Bạn chưa bật chia sẻ âm thanh. Bấm Bắt đầu ghi lại, chọn tab cuộc họp (hoặc Toàn màn hình trên Windows) và tích ô Chia sẻ âm thanh."); }
+      streams.system = new MediaStream(disp.getAudioTracks());
+    }
+    if (wantMic) streams.mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) {
+    cleanup();
+    err.textContent = e.name === "NotAllowedError" ? "Bạn đã từ chối quyền ghi âm hoặc chia sẻ. Hãy cho phép rồi thử lại." : (e.message || "Không bật được ghi âm.");
+    err.hidden = false; return;
+  }
+  let m;
+  try { m = await api("/api/live/start", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({glossary: $("#live-hint").value.trim()})}); }
+  catch (e) { cleanup(); err.textContent = e.message; err.hidden = false; return; }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  rec = { mid: m.id, t0: performance.now(), streams, loops: [], uploads: new Set(), lost: 0, ctx, meters: [], segs: [], pending: 0, stopping: false };
+  if (streams.system) { rec.loops.push(startLoop(streams.system, "system")); rec.meters.push(meter(ctx, streams.system, "m-system")); streams.system.getAudioTracks()[0].onended = () => { if (rec && !rec.stopping) alertMain("Đã ngừng chia sẻ âm thanh loa. Micro vẫn đang ghi."); }; }
+  if (streams.mic) { rec.loops.push(startLoop(streams.mic, "mic")); rec.meters.push(meter(ctx, streams.mic, "m-mic")); }
+  $("#live-start").disabled = true; $("#live-start").textContent = "● Đang ghi…";
+  current = m.id; clearTimeout(timer);
+  renderLive(); loadList(); tickLive(); pollLive();
+};
+function renderLive() {
+  const s = rec.streams;
+  $("#main").innerHTML = `<div class="bar"><h1>Đang ghi cuộc họp<small>Giữ tab này mở cho đến khi kết thúc</small></h1><button class="btn pri" id="live-stop">Kết thúc và tạo biên bản</button></div>
+    <div class="live">
+      <div class="live-top"><div class="clock"><span class="dot"></span><span id="clock">00:00</span></div><span class="hint" id="live-status">Đang nghe…</span></div>
+      <div class="meters">
+        ${s.system ? '<div class="meter"><span>Loa (cuộc họp)</span><span class="b"><i id="m-system"></i></span></div>' : ""}
+        ${s.mic ? '<div class="meter"><span>Micro của tôi</span><span class="b"><i id="m-mic"></i></span></div>' : ""}
+      </div>
+      <p class="note">Lời nói xuất hiện bên dưới sau khoảng 20–40 giây. Hãy báo cho mọi người trong cuộc họp rằng bạn đang ghi âm để lập biên bản.</p>
+      <div class="live-tr" id="live-tr"><p class="hint">Chưa có lời nói nào được chép.</p></div>
+    </div>`;
+  $("#live-stop").onclick = stopLive;
+  renderLiveTranscript();
+}
+function renderLiveTranscript() {
+  const box = $("#live-tr"); if (!box || !rec) return;
+  if (!rec.segs.length) return;
+  const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+  box.innerHTML = rec.segs.map((s) => `<div class="line"><span class="t">${fmt(s.start)}</span><span class="w">${esc(s.speaker)}:</span> ${esc(s.text)}</div>`).join("");
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+function tickLive() {
+  if (!rec) return;
+  const c = $("#clock"); if (c) c.textContent = fmt((performance.now() - rec.t0) / 1000);
+  rec.meters.forEach((f) => f());
+  requestAnimationFrame(tickLive);
+}
+async function pollLive() {
+  if (!rec || rec.stopping) return;
+  try {
+    const m = await api(`/api/meetings/${rec.mid}`);
+    rec.segs = m.transcript || [];
+    const st = $("#live-status"); if (st) st.textContent = m.pending_chunks ? `Đang chép lời ${m.pending_chunks} đoạn…` : `Đã chép ${rec.segs.length} câu`;
+    renderLiveTranscript();
+  } catch {}
+  setTimeout(pollLive, 4000);
+}
+function resetStart() { const b = $("#live-start"); b.disabled = false; b.textContent = "● Bắt đầu ghi"; }
+async function stopLive() {
+  if (!rec || rec.stopping) return;
+  rec.stopping = true;
+  const btn = $("#live-stop"); btn.disabled = true; btn.textContent = "Đang gửi phần ghi cuối…";
+  await Promise.all(rec.loops.map(stopLoop));
+  await Promise.all([...rec.uploads]);
+  Object.values(rec.streams).forEach((s) => s.getTracks().forEach((t) => t.stop()));
+  rec.ctx.close().catch(() => {});
+  const mid = rec.mid, lost = rec.lost;
+  try { await api(`/api/live/${mid}/stop`, {method: "POST", headers: keyHeader()}); }
+  catch (e) { rec = null; resetStart(); await open(mid); alertMain(e.message + " Bạn có thể nhập khóa riêng trong Cài đặt rồi bấm Tạo biên bản từ phần đã ghi."); return; }
+  rec = null; resetStart(); await open(mid); loadConfig();
+  if (lost) alertMain(`${lost} đoạn âm thanh không gửi được do mất mạng; biên bản có thể thiếu một phần.`);
+}
+window.addEventListener("beforeunload", (e) => { if (rec) { e.preventDefault(); e.returnValue = ""; } });
 
 loadConfig(); loadList();
 </script>

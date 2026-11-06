@@ -24,3 +24,12 @@ MAX_UPLOAD_BYTES = _int("MAX_UPLOAD_BYTES", 2_000_000)
 MAX_TRANSCRIPT_CHARS = _int("MAX_TRANSCRIPT_CHARS", 300_000)
 RETENTION_DAYS = _int("RETENTION_DAYS", 30)
 SECURE_COOKIES = os.environ.get("SECURE_COOKIES", "1") == "1"
+
+# Ghi trực tiếp và chép lời trên máy chủ (faster-whisper)
+ASR_ENABLED = os.environ.get("ASR_ENABLED", "1") == "1"
+ASR_MODEL = os.environ.get("ASR_MODEL", "small")              # tiny | base | small | medium | large-v3 | large-v3-turbo
+ASR_DEVICE = os.environ.get("ASR_DEVICE", "auto")             # auto | cpu | cuda
+ASR_COMPUTE_TYPE = os.environ.get("ASR_COMPUTE_TYPE", "int8")  # int8 cho CPU, float16 cho GPU
+ASR_LANGUAGE = os.environ.get("ASR_LANGUAGE", "vi")
+MAX_CHUNK_BYTES = _int("MAX_CHUNK_BYTES", 10_000_000)
+MAX_LIVE_HOURS = _int("MAX_LIVE_HOURS", 4)

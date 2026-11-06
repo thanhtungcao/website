@@ -1,0 +1,3 @@
+faster-whisper>=1.1
+# faster-whisper 1.2.x gọi av.open(metadata_errors=...), tham số này đã bị bỏ ở av 16+
+av>=11,<16

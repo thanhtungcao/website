@@ -15,7 +15,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, Header, HTTPException,
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel
 
-from . import config, recall, store, webhook
+from . import asr, config, live, recall, store, webhook
 from .minutes import Minutes, MinutesError, generate_minutes
 from .render import to_docx, to_markdown
 from .transcript import Segment, parse_recall_json, parse_transcript
@@ -153,6 +153,7 @@ def get_config(request: Request):
         "bot_enabled": bool(config.RECALL_API_KEY),
         "retention_days": config.RETENTION_DAYS,
         "max_upload_mb": round(config.MAX_UPLOAD_BYTES / 1_000_000, 1),
+        "live_enabled": asr.available(),
     }
 
 
@@ -240,7 +241,10 @@ def list_meetings(request: Request):
 
 @app.get("/api/meetings/{mid}")
 def get_meeting(mid: str, request: Request):
-    return _mine(mid, request)
+    m = _mine(mid, request)
+    m["pending_chunks"] = live.pending(mid) if m["source"] == "live" else 0
+    m.pop("meeting_url", None) if m["source"] == "live" else None
+    return m
 
 
 @app.delete("/api/meetings/{mid}")
@@ -269,3 +273,66 @@ def minutes_docx(mid: str, request: Request, org: str = ""):
     data = to_docx(minutes, d, m["platform"] if m["source"] == "bot" else "", org[:120])
     return Response(data, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     headers={"Content-Disposition": f'attachment; filename="bien-ban-{mid}.docx"'})
+
+
+# ---------- Ghi trực tiếp: nghe loa và micro, chép lời, tạo biên bản ----------
+
+class LiveStart(BaseModel):
+    glossary: str = ""
+
+
+@app.post("/api/live/start")
+def live_start(req: LiveStart, request: Request):
+    if not asr.available():
+        raise HTTPException(400, "Bản cài đặt này chưa bật ghi trực tiếp (thiếu faster-whisper). "
+                                 "Cài bằng: pip install -r requirements-asr.txt")
+    m = store.create("live", owner(request), status="recording", platform="Ghi trực tiếp")
+    store.update(m["id"], meeting_url=req.glossary[:500])  # lưu gợi ý tên riêng cho bộ chép lời
+    return store.get(m["id"])
+
+
+@app.post("/api/live/{mid}/chunk")
+async def live_chunk(mid: str, request: Request, file: UploadFile = File(...),
+                     offset: float = Form(...), source: str = Form("system")):
+    m = _mine(mid, request)
+    if m["source"] != "live" or m["status"] not in {"recording", "finishing"}:
+        raise HTTPException(409, "Cuộc họp này không còn đang ghi.")
+    if source not in live.SPEAKERS:
+        raise HTTPException(400, "Nguồn âm thanh không hợp lệ.")
+    if not 0 <= offset <= config.MAX_LIVE_HOURS * 3600:
+        raise HTTPException(400, f"Một buổi ghi tối đa {config.MAX_LIVE_HOURS} giờ.")
+    data = await file.read(config.MAX_CHUNK_BYTES + 1)
+    if len(data) > config.MAX_CHUNK_BYTES:
+        raise HTTPException(413, "Đoạn âm thanh quá lớn.")
+    if not data:
+        return {"ok": True, "pending": live.pending(mid)}
+    name = (file.filename or "").lower()
+    suffix = ".mp4" if name.endswith((".mp4", ".m4a")) else ".ogg" if name.endswith(".ogg") else ".webm"
+    live.add_chunk(mid, data, suffix, offset, source, m["meeting_url"] or "")
+    return {"ok": True, "pending": live.pending(mid)}
+
+
+@app.post("/api/live/{mid}/stop")
+def live_stop(mid: str, request: Request, x_anthropic_key: str | None = Header(None)):
+    m = _mine(mid, request)
+    if m["source"] != "live" or m["status"] != "recording":
+        raise HTTPException(409, "Cuộc họp này không còn đang ghi.")
+    key = (x_anthropic_key or "").strip() or None
+    charged = take_quota(request, key)  # hết lượt: vẫn giữ trạng thái đang ghi để người dùng nhập khóa riêng
+    store.update(mid, status="finishing")
+
+    def finish():
+        cur = store.get(mid)
+        segs = [Segment(**s) for s in (cur["transcript"] or [])]
+        if not segs:
+            store.update(mid, status="error", error="Không nghe được lời nói nào trong buổi ghi. "
+                                                     "Kiểm tra lại đã chọn chia sẻ âm thanh và bật micro chưa.")
+            if charged:
+                store.refund(charged)
+            return
+        _process(mid, segs, "Transcript được chép tự động từ âm thanh. 'Người tham dự' là âm thanh phát ra từ loa "
+                            "(nhiều người khác nhau), 'Tôi' là người ghi. Hãy suy ra tên người nói từ ngữ cảnh khi có thể.",
+                 key, charged)
+
+    live.finish_when_done(mid, finish)
+    return {"ok": True, "pending": live.pending(mid)}

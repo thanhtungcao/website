@@ -3,8 +3,10 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8000 DB_PATH=/data/thukyai.db
 WORKDIR /srv
 
-COPY requirements.txt .
+ARG WITH_ASR=0
+COPY requirements.txt requirements-asr.txt ./
 RUN pip install --no-cache-dir -r requirements.txt \
+    && if [ "$WITH_ASR" = "1" ]; then pip install --no-cache-dir -r requirements-asr.txt; fi \
     && useradd --create-home --uid 10001 app \
     && mkdir -p /data && chown app /data
 

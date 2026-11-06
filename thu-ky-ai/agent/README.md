@@ -42,10 +42,41 @@ docker build -t thu-ky-ai . && docker run -p 8000:8000 -e ANTHROPIC_API_KEY=... 
 Chạy kiểm thử (không cần khóa API):
 
 ```bash
+pip install -r requirements-asr.txt
 python -m pytest -q
 ```
 
-## Hai cách đưa cuộc họp vào
+## Ghi trực tiếp: nghe loa, tự chép lời, tạo biên bản
+
+Trong ứng dụng (`/app`), mục **Ghi cuộc họp trực tiếp**:
+
+1. Chọn nguồn: **Âm thanh từ loa** (tiếng mọi người trong cuộc họp) và/hoặc **Micro của tôi**.
+2. Bấm **Bắt đầu ghi**. Trình duyệt hỏi chia sẻ: chọn tab Google Meet/Zoom/Teams trên web, hoặc **Toàn màn hình** (Windows) khi họp bằng app, và **tích ô Chia sẻ âm thanh**.
+3. Lời nói được chép lại sau mỗi khoảng 20 giây và hiện ngay trên màn hình.
+4. Bấm **Kết thúc và tạo biên bản**: máy chủ chép nốt phần cuối rồi Claude viết biên bản.
+
+Cách hoạt động: trình duyệt ghi âm loa và micro thành hai luồng riêng, cắt đoạn 20 giây, gửi lên máy chủ. Máy chủ chép lời bằng [faster-whisper](https://github.com/SYSTRAN/faster-whisper) chạy ngay trên máy (miễn phí, âm thanh không gửi ra ngoài, file âm thanh bị xóa ngay sau khi chép). Lời từ loa ghi là "Người tham dự", lời từ micro là "Tôi"; Claude suy ra tên người nói từ ngữ cảnh khi có thể.
+
+**Cách chạy dễ nhất là trên chính máy tính bạn dùng để họp:**
+
+```bash
+./chay-tren-may.sh        # macOS / Linux
+chay-tren-may.bat         # Windows
+```
+
+| Biến | Mặc định | Ghi chú |
+|---|---|---|
+| `ASR_MODEL` | `small` | `medium` chính xác hơn; có GPU thì dùng `large-v3-turbo` với `ASR_DEVICE=cuda ASR_COMPUTE_TYPE=float16` |
+| `ASR_ENABLED` | `1` | Đặt `0` để tắt ghi trực tiếp |
+| `MAX_LIVE_HOURS` | `4` | Độ dài tối đa một buổi ghi |
+
+Lưu ý:
+- Dùng Chrome hoặc Edge. Chia sẻ âm thanh hệ thống khi chọn **Toàn màn hình** có trên Windows và ChromeOS. Trên macOS, Chrome chỉ chia sẻ được âm thanh **của một tab**: họp bằng Meet/Zoom/Teams trên trình duyệt thì chọn tab đó; họp bằng app Zoom/Teams trên Mac thì cần thiết bị âm thanh ảo như BlackHole rồi chọn nó làm micro.
+- Nên đeo tai nghe, nếu không micro sẽ thu lại tiếng loa và lời bị lặp.
+- Giữ tab ứng dụng mở trong suốt buổi ghi.
+- Model `small` cần khoảng 1 GB RAM và chép lời nhanh hơn thời gian thực trên CPU phổ thông. Gói free của Render (512 MB) không đủ; khi tự triển khai bằng Docker, build với `--build-arg WITH_ASR=1`.
+
+## Cách khác: tải transcript hoặc mời bot
 
 | Cách | Cần gì | Ghi chú |
 |---|---|---|
@@ -82,6 +113,8 @@ app/
   render.py      Markdown và Word theo thể thức NĐ 30/2020
   recall.py      tạo bot, đọc trạng thái, tải transcript từ Recall.ai
   store.py       SQLite
+  asr.py         chép lời bằng faster-whisper
+  live.py        hàng đợi chép lời cho buổi ghi trực tiếp
   webhook.py     xác thực chữ ký webhook (Svix)
   main.py        FastAPI: API, webhook, hạn mức, không gian làm việc ẩn danh
   static/        landing.html, index.html (ứng dụng), privacy.html
