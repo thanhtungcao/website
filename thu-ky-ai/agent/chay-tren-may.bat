@@ -22,7 +22,7 @@ if not exist ".venv\Scripts\python.exe" (
 set "VPY=.venv\Scripts\python.exe"
 echo [2/3] Dang kiem tra thu vien. Lan dau mat vai phut, vui long cho...
 "%VPY%" -m pip install --disable-pip-version-check -q --upgrade pip
-"%VPY%" -m pip install --disable-pip-version-check -q -r requirements.txt -r requirements-asr.txt || goto :fail
+"%VPY%" -m pip install --disable-pip-version-check -q -r requirements.txt -r requirements-asr.txt -r requirements-bot.txt || goto :fail
 
 REM ---- 3. Doc cau hinh tu file .env (neu co) ----
 if exist ".env" (
@@ -30,6 +30,7 @@ if exist ".env" (
 )
 if not defined SECURE_COOKIES set "SECURE_COOKIES=0"
 if not defined FREE_DAILY_LIMIT set "FREE_DAILY_LIMIT=0"
+if not defined LOCAL_BOT set "LOCAL_BOT=1"
 if not defined ANTHROPIC_API_KEY (
   echo.
   echo  Chua co khoa Claude API. Mo file .env bang Notepad de dien,

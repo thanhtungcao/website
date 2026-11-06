@@ -104,7 +104,7 @@ def test_join_disabled_without_recall(make_client):
 def test_privacy_and_health(make_client):
     c = make_client()
     assert "Quyền riêng tư" in c.get("/privacy").text
-    assert 'href="/app"' in c.get("/").text and "Mời bot vào cuộc họp" in c.get("/app").text
+    assert 'href="/app"' in c.get("/").text and "Mời Thư Ký AI vào cuộc họp" in c.get("/app").text
     assert c.get("/healthz").json() == {"ok": True}
 
 

@@ -42,9 +42,19 @@ docker build -t thu-ky-ai . && docker run -p 8000:8000 -e ANTHROPIC_API_KEY=... 
 Chạy kiểm thử (không cần khóa API):
 
 ```bash
-pip install -r requirements-asr.txt
+pip install -r requirements-asr.txt -r requirements-bot.txt
 python -m pytest -q
 ```
+
+## Dán link họp: Thư Ký AI tự vào họp và ghi (chạy trên máy, miễn phí)
+
+Trong ứng dụng, dán link Google Meet / Zoom / Microsoft Teams vào mục **Mời Thư Ký AI vào cuộc họp**. Máy chủ mở một cửa sổ Edge/Chrome bằng Playwright, vào họp với tên "Thư Ký AI", thu âm thanh của cuộc họp ngay trong trang (WebRTC của Meet/Teams, WebAudio của Zoom web, thẻ `<audio>`), chép lời bằng faster-whisper, và tạo biên bản khi cuộc họp kết thúc (hoặc khi bấm **Rời họp**). Zoom được mở bằng web client (`app.zoom.us/wc/join/...`) nên không cần cài app.
+
+- Chỉ bật khi `LOCAL_BOT=1` (script `chay-tren-may` bật sẵn): bot mở trình duyệt trên chính máy chạy máy chủ, nên không bật trên máy chủ công khai.
+- Cài thêm: `pip install -r requirements-bot.txt`. Bot dùng Edge hoặc Chrome có sẵn; nếu không có, chạy `python -m playwright install chromium` hoặc đặt `BOT_BROWSER_PATH`.
+- Các bước bấm "Tham gia" dựa trên giao diện tiếng Anh hiện tại của từng nền tảng và có thể hỏng khi họ đổi giao diện. Cửa sổ bot hiển thị (`BOT_HEADLESS=0`) để người dùng bấm giúp; phần thu âm vẫn hoạt động vì được gắn vào trang từ trước khi trang tải.
+- Người chủ trì phải cho bot vào phòng. Bot chờ tối đa `BOT_ADMIT_TIMEOUT_MIN` phút (mặc định 10). Cuộc họp Google Meet của tổ chức có thể chặn khách không đăng nhập.
+- Nếu đặt `RECALL_API_KEY`, ô dán link dùng Recall.ai thay cho bot chạy trên máy.
 
 ## Ghi trực tiếp: nghe loa, tự chép lời, tạo biên bản
 
@@ -115,6 +125,7 @@ app/
   store.py       SQLite
   asr.py         chép lời bằng faster-whisper
   live.py        hàng đợi chép lời cho buổi ghi trực tiếp
+  meetbot.py     bot vào họp chạy trên máy (Playwright), thu âm thanh trong trang họp
   webhook.py     xác thực chữ ký webhook (Svix)
   main.py        FastAPI: API, webhook, hạn mức, không gian làm việc ẩn danh
   static/        landing.html, index.html (ứng dụng), privacy.html

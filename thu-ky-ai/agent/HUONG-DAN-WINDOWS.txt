@@ -29,8 +29,32 @@ c) Bấm đúp file "chay-tren-may.bat".
    - Trình duyệt tự mở trang http://localhost:8000/app
 
 
-3. GHI MỘT CUỘC HỌP
--------------------
+3. CÁCH 1 - DÁN LINK, THƯ KÝ AI TỰ VÀO HỌP VÀ GHI
+-------------------------------------------------
+1. Copy link cuộc họp (Google Meet, Zoom hoặc Microsoft Teams).
+2. Trong ứng dụng, mục "Mời Thư Ký AI vào cuộc họp", dán link và bấm
+   "Mời vào họp và tự ghi".
+3. Một cửa sổ Microsoft Edge (hoặc Chrome) tự mở, vào họp với tên "Thư Ký AI".
+   - Người chủ trì cần bấm cho "Thư Ký AI" vào phòng (Admit / Cho phép).
+   - Nếu bot không tự bấm được nút tham gia, gặp captcha, hoặc trang yêu cầu
+     đăng nhập: bạn thao tác giúp trong cửa sổ đó, bot sẽ tự ghi khi đã vào họp.
+   - Có thể thu nhỏ cửa sổ bot, nhưng ĐỪNG đóng nó.
+4. Lời nói hiện trong ứng dụng sau mỗi khoảng 20-40 giây.
+5. Khi cuộc họp kết thúc, bot tự rời họp và tạo biên bản.
+   Muốn dừng sớm: bấm "Rời họp và tạo biên bản".
+
+Lưu ý theo nền tảng:
+- Google Meet: cuộc họp của tổ chức có thể chặn khách không đăng nhập.
+  Khi đó, đăng nhập Google trong cửa sổ bot, hoặc dùng Cách 2 bên dưới.
+- Zoom: bot dùng Zoom trên trình duyệt (app.zoom.us). Người chủ trì cần cho
+  phép tham gia từ trình duyệt (mặc định đã bật).
+- Microsoft Teams: bot vào bằng "Continue on this browser" và chờ ở phòng chờ.
+- Bot nghe được tiếng mọi người trong cuộc họp, kể cả tiếng của bạn, nên không
+  cần bật micro.
+
+
+4. CÁCH 2 - GHI TỪ LOA VÀ MICRO CỦA MÁY BẠN
+------------------------------------------
 1. Trong ứng dụng, mục "Ghi cuộc họp trực tiếp", tích:
    - "Âm thanh từ loa": tiếng mọi người trong cuộc họp
    - "Micro của tôi": tiếng của bạn
@@ -51,7 +75,7 @@ Mẹo:
 - Ngoài ghi trực tiếp, bạn có thể tải lên file transcript .vtt mà Zoom/Teams/Meet xuất ra.
 
 
-4. TẮT VÀ MỞ LẠI
+5. TẮT VÀ MỞ LẠI
 ----------------
 - Tắt: đóng cửa sổ đen "Thu Ky AI".
 - Mở lại: bấm đúp "chay-tren-may.bat" (từ lần 2 khởi động trong vài giây).
@@ -59,21 +83,26 @@ Mẹo:
   Hãy xuất Word nếu cần lưu lâu dài.
 
 
-5. TÙY CHỈNH (trong file .env)
+6. TÙY CHỈNH (trong file .env)
 ------------------------------
 ASR_MODEL=small     Độ chính xác chép lời: small (mặc định, nhanh), medium (chính xác hơn, chậm hơn).
                     Máy có card NVIDIA: ASR_MODEL=large-v3-turbo, ASR_DEVICE=cuda, ASR_COMPUTE_TYPE=float16
 GLOSSARY=           Tên riêng, thuật ngữ luôn cần viết đúng, cách nhau bằng dấu phẩy.
 RETENTION_DAYS=30   Số ngày giữ biên bản.
+BOT_HEADLESS=1      Ẩn cửa sổ bot (mặc định 0: hiện cửa sổ để bạn bấm giúp khi cần).
+BOT_ADMIT_TIMEOUT_MIN=10   Số phút bot chờ được cho vào phòng.
 
 
-6. XỬ LÝ SỰ CỐ
+7. XỬ LÝ SỰ CỐ
 --------------
 - "Chua tim thay Python": cài Python 3.12 và nhớ tích "Add python.exe to PATH", rồi chạy lại.
 - "Cai dat that bai": kiểm tra Internet; cài Microsoft Visual C++ Redistributable
   tại https://aka.ms/vs/17/release/vc_redist.x64.exe rồi chạy lại.
 - "Bạn chưa bật chia sẻ âm thanh": bấm Bắt đầu ghi lại và nhớ tích ô chia sẻ âm thanh.
 - "address already in use": đang có một cửa sổ Thu Ky AI khác chạy; đóng nó rồi chạy lại.
+- Bot báo "Không mở được trình duyệt": cài Microsoft Edge hoặc Google Chrome.
+- Bot chờ mãi ở phòng chờ: người chủ trì cần cho "Thư Ký AI" vào phòng.
+- Bot không tự bấm "Tham gia": bấm giúp trong cửa sổ bot; giao diện trang họp có thể vừa thay đổi.
 - Chép lời sai nhiều: thử ASR_MODEL=medium trong file .env, nói rõ, dùng micro tốt.
 - Khóa API không hợp lệ: kiểm tra lại khóa trong file .env hoặc mục Cài đặt.
 

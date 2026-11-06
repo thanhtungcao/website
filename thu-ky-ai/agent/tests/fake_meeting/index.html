@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Phòng họp giả</title></head>
+<body>
+<p>Phòng họp giả để kiểm thử bot: phát âm thanh "người tham dự" qua WebRTC (giống Meet/Teams) và qua WebAudio (giống Zoom web).</p>
+<audio id="remote" autoplay></audio>
+<script>
+(async () => {
+  // Người tham dự 1: tiếng 440 Hz gửi qua kết nối WebRTC, phát bằng thẻ <audio>
+  const sendCtx = new AudioContext();
+  const osc = sendCtx.createOscillator(); osc.frequency.value = 440;
+  const out = sendCtx.createMediaStreamDestination(); osc.connect(out); osc.start();
+  const a = new RTCPeerConnection(), b = new RTCPeerConnection();
+  a.onicecandidate = (e) => e.candidate && b.addIceCandidate(e.candidate);
+  b.onicecandidate = (e) => e.candidate && a.addIceCandidate(e.candidate);
+  b.ontrack = (e) => { document.getElementById("remote").srcObject = e.streams[0]; };
+  out.stream.getTracks().forEach((t) => a.addTrack(t, out.stream));
+  const offer = await a.createOffer(); await a.setLocalDescription(offer); await b.setRemoteDescription(offer);
+  const answer = await b.createAnswer(); await b.setLocalDescription(answer); await a.setRemoteDescription(answer);
+  // Người tham dự 2: tiếng 880 Hz phát thẳng ra loa qua WebAudio
+  const playCtx = new AudioContext();
+  const o2 = playCtx.createOscillator(); o2.frequency.value = 880;
+  const g = playCtx.createGain(); g.gain.value = 0.3; o2.connect(g); g.connect(playCtx.destination); o2.start();
+  document.title = "ready";
+})();
+</script>
+</body></html>

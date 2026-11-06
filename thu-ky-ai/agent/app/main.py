@@ -15,7 +15,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, Header, HTTPException,
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel
 
-from . import asr, config, live, recall, store, webhook
+from . import asr, config, live, meetbot, recall, store, webhook
 from .minutes import Minutes, MinutesError, generate_minutes
 from .render import to_docx, to_markdown
 from .transcript import Segment, parse_recall_json, parse_transcript
@@ -154,6 +154,7 @@ def get_config(request: Request):
         "retention_days": config.RETENTION_DAYS,
         "max_upload_mb": round(config.MAX_UPLOAD_BYTES / 1_000_000, 1),
         "live_enabled": asr.available(),
+        "local_bot_enabled": meetbot.available() and asr.available(),
     }
 
 
@@ -178,13 +179,19 @@ async def upload(request: Request, background: BackgroundTasks, file: UploadFile
 class JoinRequest(BaseModel):
     meeting_url: str
     join_at: str | None = None
+    glossary: str = ""
+
+
+BOT_CONTEXT = ("Transcript được chép tự động từ âm thanh cuộc họp mà bot nghe được. 'Người tham dự' gồm nhiều người "
+               "nói khác nhau; hãy suy ra tên người nói từ ngữ cảnh (lời chào, gọi tên) khi có thể.")
 
 
 @app.post("/api/meetings/join")
-def join(req: JoinRequest, request: Request):
+def join(req: JoinRequest, request: Request, x_anthropic_key: str | None = Header(None)):
+    url = req.meeting_url.strip()
     if not config.RECALL_API_KEY:
-        raise HTTPException(400, "Bản cài đặt này chưa bật tính năng mời bot. Bạn vẫn có thể tải transcript lên.")
-    if not recall.detect_platform(req.meeting_url):
+        return _join_local(url, req.glossary.strip()[:500], request, (x_anthropic_key or "").strip() or None)
+    if not recall.detect_platform(url):
         raise HTTPException(400, "Link họp không hợp lệ. Hỗ trợ Zoom, Google Meet và Microsoft Teams.")
     charged = take_quota(request, None)
     try:
@@ -194,6 +201,42 @@ def join(req: JoinRequest, request: Request):
         raise HTTPException(400, str(e))
     return store.create("bot", owner(request), status="joining", platform=recall.detect_platform(req.meeting_url),
                         meeting_url=req.meeting_url, bot_id=bot["id"])
+
+
+def _join_local(url: str, hint: str, request: Request, key: str | None) -> dict:
+    """Bot chạy trên máy: mở Edge/Chrome, vào link họp, thu âm thanh, chép lời bằng faster-whisper."""
+    if not meetbot.available():
+        raise HTTPException(400, "Bản cài đặt này chưa bật bot vào họp. Chạy trên máy bằng chay-tren-may.bat (LOCAL_BOT=1).")
+    if not asr.available():
+        raise HTTPException(400, "Bot cần bộ chép lời faster-whisper. Cài bằng: pip install -r requirements-asr.txt")
+    platform = meetbot.detect(url)
+    if not platform:
+        raise HTTPException(400, "Link họp không hợp lệ. Hỗ trợ link Google Meet, Zoom và Microsoft Teams.")
+    if meetbot.active_count() >= config.BOT_MAX_CONCURRENT:
+        raise HTTPException(429, f"Đang có {config.BOT_MAX_CONCURRENT} bot trong cuộc họp. Cho một bot rời họp rồi thử lại.")
+    charged = take_quota(request, key)
+    m = store.create("botlocal", owner(request), status="joining", platform=meetbot.PLATFORM_NAMES[platform], meeting_url=url)
+    store.update(m["id"], hint=hint)
+
+    def on_done(mid: str, ok: bool) -> None:
+        if ok:
+            live.finish_when_done(mid, _make_finish(mid, key, charged, BOT_CONTEXT,
+                                                    "Bot không nghe được lời nói nào trong cuộc họp."))
+        elif charged:
+            store.refund(charged)
+
+    meetbot.start(m["id"], url, platform, hint, on_done)
+    return store.get(m["id"])
+
+
+@app.post("/api/meetings/{mid}/leave")
+def leave(mid: str, request: Request):
+    m = _mine(mid, request)
+    if m["source"] != "botlocal":
+        raise HTTPException(400, "Cuộc họp này không có bot chạy trên máy.")
+    if not meetbot.stop(mid) and m["status"] in {"joining", "waiting", "recording"}:
+        store.update(mid, status="error", error="Bot đã dừng (máy chủ khởi động lại khi đang họp).")
+    return store.get(mid)
 
 
 def _mine(mid: str, request: Request) -> dict:
@@ -242,13 +285,14 @@ def list_meetings(request: Request):
 @app.get("/api/meetings/{mid}")
 def get_meeting(mid: str, request: Request):
     m = _mine(mid, request)
-    m["pending_chunks"] = live.pending(mid) if m["source"] == "live" else 0
-    m.pop("meeting_url", None) if m["source"] == "live" else None
+    m["pending_chunks"] = live.pending(mid) if m["source"] in {"live", "botlocal"} else 0
     return m
 
 
 @app.delete("/api/meetings/{mid}")
 def delete_meeting(mid: str, request: Request):
+    if store.get(mid, owner(request)):
+        meetbot.stop(mid)  # xóa khi bot còn trong họp: cho bot rời họp
     if not store.delete(mid, owner(request)):
         raise HTTPException(404, "Không tìm thấy cuộc họp.")
     return {"ok": True}
@@ -287,7 +331,7 @@ def live_start(req: LiveStart, request: Request):
         raise HTTPException(400, "Bản cài đặt này chưa bật ghi trực tiếp (thiếu faster-whisper). "
                                  "Cài bằng: pip install -r requirements-asr.txt")
     m = store.create("live", owner(request), status="recording", platform="Ghi trực tiếp")
-    store.update(m["id"], meeting_url=req.glossary[:500])  # lưu gợi ý tên riêng cho bộ chép lời
+    store.update(m["id"], hint=req.glossary[:500])  # gợi ý tên riêng cho bộ chép lời
     return store.get(m["id"])
 
 
@@ -308,7 +352,7 @@ async def live_chunk(mid: str, request: Request, file: UploadFile = File(...),
         return {"ok": True, "pending": live.pending(mid)}
     name = (file.filename or "").lower()
     suffix = ".mp4" if name.endswith((".mp4", ".m4a")) else ".ogg" if name.endswith(".ogg") else ".webm"
-    live.add_chunk(mid, data, suffix, offset, source, m["meeting_url"] or "")
+    live.add_chunk(mid, data, suffix, offset, source, m["hint"] or "")
     return {"ok": True, "pending": live.pending(mid)}
 
 
@@ -320,19 +364,23 @@ def live_stop(mid: str, request: Request, x_anthropic_key: str | None = Header(N
     key = (x_anthropic_key or "").strip() or None
     charged = take_quota(request, key)  # hết lượt: vẫn giữ trạng thái đang ghi để người dùng nhập khóa riêng
     store.update(mid, status="finishing")
+    live.finish_when_done(mid, _make_finish(
+        mid, key, charged,
+        "Transcript được chép tự động từ âm thanh. 'Người tham dự' là âm thanh phát ra từ loa "
+        "(nhiều người khác nhau), 'Tôi' là người ghi. Hãy suy ra tên người nói từ ngữ cảnh khi có thể.",
+        "Không nghe được lời nói nào trong buổi ghi. Kiểm tra lại đã chọn chia sẻ âm thanh và bật micro chưa."))
+    return {"ok": True, "pending": live.pending(mid)}
 
+
+def _make_finish(mid: str, key: str | None, charged: list[str] | None, context: str, empty_error: str):
+    """Hàm chạy khi đã chép lời xong mọi đoạn âm thanh: tạo biên bản, hoặc báo lỗi nếu không có lời nói."""
     def finish():
         cur = store.get(mid)
-        segs = [Segment(**s) for s in (cur["transcript"] or [])]
+        segs = [Segment(**s) for s in (cur["transcript"] or [])] if cur else []
         if not segs:
-            store.update(mid, status="error", error="Không nghe được lời nói nào trong buổi ghi. "
-                                                     "Kiểm tra lại đã chọn chia sẻ âm thanh và bật micro chưa.")
+            store.update(mid, status="error", error=empty_error)
             if charged:
                 store.refund(charged)
             return
-        _process(mid, segs, "Transcript được chép tự động từ âm thanh. 'Người tham dự' là âm thanh phát ra từ loa "
-                            "(nhiều người khác nhau), 'Tôi' là người ghi. Hãy suy ra tên người nói từ ngữ cảnh khi có thể.",
-                 key, charged)
-
-    live.finish_when_done(mid, finish)
-    return {"ok": True, "pending": live.pending(mid)}
+        _process(mid, segs, context, key, charged)
+    return finish

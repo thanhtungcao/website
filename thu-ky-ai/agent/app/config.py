@@ -33,3 +33,11 @@ ASR_COMPUTE_TYPE = os.environ.get("ASR_COMPUTE_TYPE", "int8")  # int8 cho CPU, f
 ASR_LANGUAGE = os.environ.get("ASR_LANGUAGE", "vi")
 MAX_CHUNK_BYTES = _int("MAX_CHUNK_BYTES", 10_000_000)
 MAX_LIVE_HOURS = _int("MAX_LIVE_HOURS", 4)
+
+# Bot vào họp chạy trên máy (Playwright + Edge/Chrome). Chỉ bật trên máy cá nhân: bot mở trình duyệt trên máy chủ.
+LOCAL_BOT = os.environ.get("LOCAL_BOT", "0") == "1"
+BOT_HEADLESS = os.environ.get("BOT_HEADLESS", "0") == "1"      # 0: hiện cửa sổ bot để bạn bấm giúp khi cần
+BOT_BROWSER_PATH = os.environ.get("BOT_BROWSER_PATH", "")      # để trống: tự dùng Edge, rồi Chrome
+BOT_ADMIT_TIMEOUT_MIN = _int("BOT_ADMIT_TIMEOUT_MIN", 10)       # chờ chủ trì cho vào tối đa (phút)
+BOT_CHUNK_SECONDS = _int("BOT_CHUNK_SECONDS", 20)
+BOT_MAX_CONCURRENT = _int("BOT_MAX_CONCURRENT", 2)

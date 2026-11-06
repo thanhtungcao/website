@@ -25,6 +25,7 @@ _COLUMNS = {
     "error": "TEXT",
     "transcript": "TEXT",               # JSON danh sách segment
     "minutes": "TEXT",                  # JSON biên bản
+    "hint": "TEXT",                     # tên riêng, thuật ngữ gợi ý cho bộ chép lời
 }
 
 

@@ -107,6 +107,14 @@ dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-ra
 <div class="app">
   <aside>
     <a class="brand" href="/" style="text-decoration:none;color:inherit"><i>TK</i>Thư Ký AI</a>
+    <form class="box" id="join" hidden>
+      <h2>Mời Thư Ký AI vào cuộc họp</h2>
+      <input type="url" id="url" placeholder="Dán link Zoom, Google Meet hoặc Teams" required>
+      <input type="text" id="join-hint" placeholder="Tên riêng cần nghe đúng (không bắt buộc)">
+      <button class="btn pri" type="submit" id="join-btn">Mời vào họp và tự ghi</button>
+      <p class="hint" id="join-note" hidden>Một cửa sổ trình duyệt sẽ mở và vào họp với tên "Thư Ký AI". Hãy cho bot vào phòng (admit). Nếu bot không tự bấm được nút tham gia, bạn bấm giúp trong cửa sổ đó.</p>
+      <p class="err" id="join-err" hidden></p>
+    </form>
     <div class="box" id="live-box" hidden>
       <h2>Ghi cuộc họp trực tiếp</h2>
       <label class="chk"><input type="checkbox" id="src-system" checked><span>Âm thanh từ loa<small>Chọn tab hoặc màn hình đang họp và bật chia sẻ âm thanh</small></span></label>
@@ -115,12 +123,6 @@ dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-ra
       <button class="btn rec" type="button" id="live-start">● Bắt đầu ghi</button>
       <p class="err" id="live-err" hidden></p>
     </div>
-    <form class="box" id="join" hidden>
-      <h2>Mời bot vào cuộc họp</h2>
-      <input type="url" id="url" placeholder="Dán link Zoom, Google Meet hoặc Teams" required>
-      <button class="btn pri" type="submit" id="join-btn">Mời Thư Ký AI tham gia</button>
-      <p class="err" id="join-err" hidden></p>
-    </form>
     <div class="box">
       <h2>Hoặc tải transcript lên</h2>
       <label class="drop" id="drop" for="file">Kéo thả hoặc chọn file .vtt, .srt, .txt<br><span class="hint">Xuất từ Zoom, Teams, Google Meet</span></label>
@@ -149,13 +151,14 @@ dialog input{width:100%;padding:10px 12px;border:1px solid var(--line);border-ra
 <script>
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const STATUS = {ready:["ready","Sẵn sàng"], error:["error","Lỗi"], processing:["wait","Đang viết biên bản"], joining:["wait","Bot đang vào họp"], recording:["wait","Đang ghi"], finishing:["wait","Đang chép nốt lời"]};
+const STATUS = {ready:["ready","Sẵn sàng"], error:["error","Lỗi"], processing:["wait","Đang viết biên bản"], joining:["wait","Bot đang vào họp"], recording:["wait","Đang ghi"], finishing:["wait","Đang chép nốt lời"], waiting:["wait","Chờ cho vào phòng"]};
 let current = null, timer = null, cfg = {};
 const ls = {get(k){try{return localStorage.getItem(k)||""}catch{return ""}}, set(k,v){try{v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch{}}};
 function keyHeader(){ const k = ls.get("tk_key"); return k ? {"X-Anthropic-Key": k} : {}; }
 async function loadConfig(){
   try { cfg = await api("/api/config"); } catch { return; }
-  $("#join").hidden = !cfg.bot_enabled;
+  $("#join").hidden = !(cfg.bot_enabled || cfg.local_bot_enabled);
+  $("#join-note").hidden = !cfg.local_bot_enabled || cfg.bot_enabled;
   $("#live-box").hidden = !cfg.live_enabled;
   const own = !!ls.get("tk_key");
   $("#quota").innerHTML = own ? "Đang dùng <b>khóa riêng</b>, không giới hạn"
@@ -214,6 +217,15 @@ function render(m) {
   else actions = `<button class="btn danger" id="del">Xóa</button>`;
   let body;
   if (m.status === "error") body = `<div class="waiting"><p class="err">${esc(m.error)}</p></div>`;
+  else if (m.source === "botlocal" && ["joining", "waiting", "recording"].includes(m.status)) {
+    const msg = {joining: "Bot đang mở trang họp và bấm tham gia…", waiting: "Bot đang ở phòng chờ. Hãy cho “Thư Ký AI” vào cuộc họp (Admit).", recording: "Bot đang trong cuộc họp và ghi lại nội dung."}[m.status];
+    const lines = (m.transcript || []).map((s) => `<div class="line"><span class="t">${fmt(s.start)}</span><span class="w">${esc(s.speaker)}:</span> ${esc(s.text)}</div>`).join("");
+    actions = `<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" id="bot-leave">${m.status === "recording" ? "Rời họp và tạo biên bản" : "Hủy"}</button></div>`;
+    body = `<div class="live"><div class="live-top"><div style="font-size:16px;font-weight:600;display:flex;align-items:center">${m.status === "recording" ? '<span class="dot"></span>' : '<span class="spin" style="width:16px;height:16px;margin:0 8px -2px 0"></span>'}${msg}</div>
+      <span class="hint">${m.pending_chunks ? `Đang chép lời ${m.pending_chunks} đoạn…` : (m.transcript || []).length ? `Đã chép ${(m.transcript || []).length} câu` : ""}</span></div>
+      ${m.status !== "recording" ? '<p class="note">Bot dùng tên “Thư Ký AI”. Nếu trang họp yêu cầu đăng nhập, captcha hoặc bot không tự bấm được nút tham gia, hãy thao tác giúp trong cửa sổ trình duyệt của bot.</p>' : '<p class="note">Biên bản sẽ được tạo tự động khi cuộc họp kết thúc. Lời nói xuất hiện bên dưới sau khoảng 20–40 giây.</p>'}
+      <div class="live-tr">${lines || '<p class="hint">Chưa có lời nói nào được chép.</p>'}</div></div>`;
+  }
   else if (!m.minutes && m.source === "live" && m.status === "recording") body = `<div class="waiting">Buổi ghi này bị gián đoạn (trang đã đóng khi đang ghi). <button class="btn" id="resume-stop">Tạo biên bản từ phần đã ghi</button></div>`;
   else if (!m.minutes) body = `<div class="waiting"><span class="spin"></span>${STATUS[m.status]?.[1] || "Đang xử lý"}${m.pending_chunks ? ` (còn ${m.pending_chunks} đoạn âm thanh)` : ""}… Trang tự cập nhật.</div>`;
   else {
@@ -231,6 +243,8 @@ function render(m) {
   }
   $("#main").innerHTML = `<div class="bar"><h1>${esc(title)}<small>${sub}</small></h1>${actions}</div>${body}`;
   document.querySelectorAll(".ts").forEach((b) => b.onclick = () => jump(b.dataset.ts));
+  const bl = $("#bot-leave");
+  if (bl) bl.onclick = async () => { bl.disabled = true; bl.textContent = "Đang rời họp…"; try { await api(`/api/meetings/${m.id}/leave`, {method: "POST"}); } catch (e) { alertMain(e.message); } };
   const rs = $("#resume-stop");
   if (rs) rs.onclick = async () => { try { await api(`/api/live/${m.id}/stop`, {method:"POST", headers: keyHeader()}); open(m.id); } catch (e) { alertMain(e.message); } };
   const del = $("#del");
@@ -250,14 +264,14 @@ async function open(id) {
     if (!m.minutes && m.status !== "error" && m.source === "bot") m = await api(`/api/meetings/${id}/refresh`, {method:"POST"});
   } catch (e) { $("#main").innerHTML = `<div class="waiting"><p class="err">${esc(e.message)}</p></div>`; return; }
   render(m); loadList(); if (m.status === "ready" || m.status === "error") loadConfig();
-  if (!m.minutes && m.status !== "error") timer = setTimeout(() => open(id), m.source === "bot" ? 10000 : 3000);
+  if (!m.minutes && m.status !== "error") timer = setTimeout(() => open(id), m.source === "bot" ? 10000 : 4000);
 }
 
 $("#join").onsubmit = async (e) => {
   e.preventDefault();
   const btn = $("#join-btn"), err = $("#join-err");
   btn.disabled = true; err.hidden = true;
-  try { const m = await api("/api/meetings/join", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({meeting_url: $("#url").value})}); $("#url").value = ""; open(m.id); }
+  try { const m = await api("/api/meetings/join", {method:"POST", headers:{"Content-Type":"application/json", ...keyHeader()}, body: JSON.stringify({meeting_url: $("#url").value.trim(), glossary: $("#join-hint").value.trim()})}); $("#url").value = ""; loadConfig(); open(m.id); }
   catch (x) { err.textContent = x.message; err.hidden = false; }
   finally { btn.disabled = false; }
 };

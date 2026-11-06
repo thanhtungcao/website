@@ -62,7 +62,7 @@ def test_live_flow_to_minutes(client):
     t = c.get(f"/api/meetings/{mid}").json()
     assert [s["start"] for s in t["transcript"]] == [1.0, 1.5, 21.0]          # sắp theo thời gian
     assert {s["speaker"] for s in t["transcript"]} == {"Người tham dự", "Tôi"}
-    assert "meeting_url" not in t and heard[0][2] == "An Phát, anh Quân"      # gợi ý tên riêng tới bộ chép lời
+    assert t["hint"] == "An Phát, anh Quân" and heard[0][2] == "An Phát, anh Quân"   # gợi ý tên riêng tới bộ chép lời
     assert c.post(f"/api/live/{mid}/stop").status_code == 200
     done = wait_ready(c, mid)
     assert done["status"] == "ready" and len(c.got["segs"]) == 3
