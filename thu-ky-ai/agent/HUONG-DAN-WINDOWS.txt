@@ -1,0 +1,82 @@
+THƯ KÝ AI - HƯỚNG DẪN CHẠY TRÊN WINDOWS
+=======================================
+
+Thư Ký AI nghe cuộc họp Zoom, Google Meet, Microsoft Teams qua loa và micro,
+tự chép lời ngay trên máy tính của bạn, rồi viết biên bản họp tiếng Việt
+(xuất được file Word theo thể thức biên bản hành chính).
+
+
+1. CHUẨN BỊ (chỉ làm một lần)
+-----------------------------
+- Windows 10 hoặc 11, 64-bit, RAM từ 4 GB, ổ đĩa trống khoảng 2 GB.
+- Trình duyệt Google Chrome hoặc Microsoft Edge.
+- Python 3.12: tải tại https://www.python.org/downloads/windows/
+  Khi cài, NHỚ TÍCH Ô "Add python.exe to PATH".
+- Khóa Claude API (để AI viết biên bản): tạo tại https://console.anthropic.com
+  mục API Keys. Phí trả theo mức dùng, mỗi biên bản thường chỉ tốn vài nghìn đồng.
+
+
+2. CÀI ĐẶT
+----------
+a) Giải nén file zip vào một thư mục, ví dụ C:\ThuKyAI
+   (đừng chạy trực tiếp bên trong file zip).
+b) Mở file ".env" trong thư mục đó bằng Notepad, dán khóa Claude API vào sau
+   dấu bằng của dòng ANTHROPIC_API_KEY=, rồi lưu lại.
+   (Có thể bỏ qua bước này và nhập khóa trong mục Cài đặt của ứng dụng.)
+c) Bấm đúp file "chay-tren-may.bat".
+   - Lần đầu mất vài phút để cài thư viện.
+   - Nếu Windows hiện "Windows protected your PC", bấm "More info" rồi "Run anyway".
+   - Trình duyệt tự mở trang http://localhost:8000/app
+
+
+3. GHI MỘT CUỘC HỌP
+-------------------
+1. Trong ứng dụng, mục "Ghi cuộc họp trực tiếp", tích:
+   - "Âm thanh từ loa": tiếng mọi người trong cuộc họp
+   - "Micro của tôi": tiếng của bạn
+2. (Không bắt buộc) Gõ tên người, tên công ty, thuật ngữ cần nghe đúng.
+3. Bấm "Bắt đầu ghi". Trình duyệt hỏi chia sẻ:
+   - Họp bằng app Zoom/Teams: chọn thẻ "Toàn bộ màn hình" (Entire screen)
+   - Họp bằng Google Meet/Teams/Zoom trên trình duyệt: chọn thẻ "Thẻ Chrome" (Chrome tab) và chọn tab cuộc họp
+   - BẮT BUỘC tích ô "Chia sẻ âm thanh hệ thống" / "Also share tab audio"
+   Sau đó cho phép dùng micro.
+4. Lời nói hiện trên màn hình sau mỗi khoảng 20-40 giây.
+5. Họp xong, bấm "Kết thúc và tạo biên bản". Chờ khoảng 1-2 phút.
+6. Bấm "Xuất Word" để tải biên bản. Vào "Cài đặt" để in tên cơ quan lên biên bản.
+
+Mẹo:
+- Đeo tai nghe để micro không thu lại tiếng loa (tránh lời bị lặp).
+- Giữ tab ứng dụng và cửa sổ đen "Thu Ky AI" mở trong suốt buổi họp.
+- Hãy báo cho mọi người trong cuộc họp rằng bạn đang ghi âm để lập biên bản.
+- Ngoài ghi trực tiếp, bạn có thể tải lên file transcript .vtt mà Zoom/Teams/Meet xuất ra.
+
+
+4. TẮT VÀ MỞ LẠI
+----------------
+- Tắt: đóng cửa sổ đen "Thu Ky AI".
+- Mở lại: bấm đúp "chay-tren-may.bat" (từ lần 2 khởi động trong vài giây).
+- Biên bản được lưu trong file thukyai.db trong thư mục, tự xóa sau 30 ngày.
+  Hãy xuất Word nếu cần lưu lâu dài.
+
+
+5. TÙY CHỈNH (trong file .env)
+------------------------------
+ASR_MODEL=small     Độ chính xác chép lời: small (mặc định, nhanh), medium (chính xác hơn, chậm hơn).
+                    Máy có card NVIDIA: ASR_MODEL=large-v3-turbo, ASR_DEVICE=cuda, ASR_COMPUTE_TYPE=float16
+GLOSSARY=           Tên riêng, thuật ngữ luôn cần viết đúng, cách nhau bằng dấu phẩy.
+RETENTION_DAYS=30   Số ngày giữ biên bản.
+
+
+6. XỬ LÝ SỰ CỐ
+--------------
+- "Chua tim thay Python": cài Python 3.12 và nhớ tích "Add python.exe to PATH", rồi chạy lại.
+- "Cai dat that bai": kiểm tra Internet; cài Microsoft Visual C++ Redistributable
+  tại https://aka.ms/vs/17/release/vc_redist.x64.exe rồi chạy lại.
+- "Bạn chưa bật chia sẻ âm thanh": bấm Bắt đầu ghi lại và nhớ tích ô chia sẻ âm thanh.
+- "address already in use": đang có một cửa sổ Thu Ky AI khác chạy; đóng nó rồi chạy lại.
+- Chép lời sai nhiều: thử ASR_MODEL=medium trong file .env, nói rõ, dùng micro tốt.
+- Khóa API không hợp lệ: kiểm tra lại khóa trong file .env hoặc mục Cài đặt.
+
+Dữ liệu: âm thanh được chép lời ngay trên máy bạn và bị xóa sau khi chép.
+Chỉ nội dung chữ được gửi tới Claude API để viết biên bản.
+Mã nguồn: https://github.com/thanhtungcao/website/tree/main/thu-ky-ai/agent (giấy phép MIT)
